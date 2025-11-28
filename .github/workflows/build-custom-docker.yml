@@ -3,7 +3,6 @@ name: Build Custom Chatwoot CE Docker Image
 on:
   push:
     branches:
-      - custom-v4.8.0
       - develop
       - master
     tags:
