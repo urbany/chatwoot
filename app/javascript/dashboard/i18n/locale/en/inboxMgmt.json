@@ -612,7 +612,8 @@
       "WIDGET_BUILDER": "Widget Builder",
       "BOT_CONFIGURATION": "Bot Configuration",
       "ACCOUNT_HEALTH": "Account Health",
-      "CSAT": "CSAT"
+      "CSAT": "CSAT",
+      "WHATSAPP_TEMPLATES": "WhatsApp Templates"
     },
     "ACCOUNT_HEALTH": {
       "TITLE": "Manage your WhatsApp account",
@@ -996,6 +997,14 @@
         "TITLE": "Other Providers",
         "DESCRIPTION": "Connect with Other Providers"
       }
+    },
+    "WHATSAPP_TEMPLATES": {
+      "TITLE": "WhatsApp Templates",
+      "DESCRIPTION": "View and manage WhatsApp message templates synced from your WhatsApp Business Account. Templates must be approved by WhatsApp before they can be used to send messages.",
+      "LOADING": "Loading templates...",
+      "NO_TEMPLATES": "No templates found",
+      "NO_TEMPLATES_HINT": "Create templates in your Meta Business Manager. They will be synced automatically.",
+      "VIEW_DETAILS": "View component details"
     },
     "CHANNELS": {
       "MESSENGER": "Messenger",
