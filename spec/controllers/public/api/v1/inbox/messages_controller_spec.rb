@@ -82,8 +82,9 @@ RSpec.describe 'Public Inbox Contact Conversation Messages API', type: :request 
       end
 
       it 'uses the group member as sender when sender_identifier matches' do
-        post "/public/api/v1/inboxes/#{api_channel.identifier}/contacts/#{group_contact_inbox.source_id}/conversations/#{group_conversation.display_id}/messages",
-             params: { content: 'hello from member', sender_identifier: 'member-001' }
+        url = "/public/api/v1/inboxes/#{api_channel.identifier}/contacts/#{group_contact_inbox.source_id}" \
+              "/conversations/#{group_conversation.display_id}/messages"
+        post url, params: { content: 'hello from member', sender_identifier: 'member-001' }
 
         expect(response).to have_http_status(:success)
         message = group_conversation.messages.reload.last
@@ -92,8 +93,9 @@ RSpec.describe 'Public Inbox Contact Conversation Messages API', type: :request 
       end
 
       it 'falls back to primary contact when sender_identifier not found' do
-        post "/public/api/v1/inboxes/#{api_channel.identifier}/contacts/#{group_contact_inbox.source_id}/conversations/#{group_conversation.display_id}/messages",
-             params: { content: 'hello', sender_identifier: 'unknown-identifier' }
+        url = "/public/api/v1/inboxes/#{api_channel.identifier}/contacts/#{group_contact_inbox.source_id}" \
+              "/conversations/#{group_conversation.display_id}/messages"
+        post url, params: { content: 'hello', sender_identifier: 'unknown-identifier' }
 
         expect(response).to have_http_status(:success)
         message = group_conversation.messages.reload.last
@@ -103,8 +105,9 @@ RSpec.describe 'Public Inbox Contact Conversation Messages API', type: :request 
 
       it 'falls back to primary contact when sender_identifier belongs to contact not in group' do
         create(:contact, account: account, identifier: 'outside-001')
-        post "/public/api/v1/inboxes/#{api_channel.identifier}/contacts/#{group_contact_inbox.source_id}/conversations/#{group_conversation.display_id}/messages",
-             params: { content: 'hello', sender_identifier: 'outside-001' }
+        url = "/public/api/v1/inboxes/#{api_channel.identifier}/contacts/#{group_contact_inbox.source_id}" \
+              "/conversations/#{group_conversation.display_id}/messages"
+        post url, params: { content: 'hello', sender_identifier: 'outside-001' }
 
         expect(response).to have_http_status(:success)
         message = group_conversation.messages.reload.last
