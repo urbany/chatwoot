@@ -315,7 +315,7 @@
     "GROUP": {
       "MEMBERS": "Group Members",
       "PRIMARY_CONTACT": "Primary contact",
-      "MEMBER_COUNT": "{count} member | {count} members",
+      "MEMBER_COUNT": "{n} member | {n} members",
       "SEPARATOR": "•"
     },
     "VOICE_WIDGET": {

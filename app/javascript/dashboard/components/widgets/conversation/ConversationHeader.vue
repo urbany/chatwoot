@@ -171,7 +171,7 @@ const copyConversationId = async () => {
           class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
         >
           <span v-if="isGroupConversation" class="text-n-slate-11">
-            {{ $tc('CONVERSATION.GROUP.MEMBER_COUNT', groupMemberCount) }}
+            {{ $t('CONVERSATION.GROUP.MEMBER_COUNT', groupMemberCount) }}
           </span>
           <span v-if="isGroupConversation" class="text-n-slate-10">
             {{ $t('CONVERSATION.GROUP.SEPARATOR') }}
