@@ -52,14 +52,14 @@ git push origin develop
 ### 3. Production Release (Tagged)
 ```bash
 # Create and push version tag
-git tag -a v4.8.1-feature-name -m "Description of changes"
-git push origin v4.8.1-feature-name
+git tag -a v4.12.1-feature-name -m "Description of changes"
+git push origin v4.12.1-feature-name
 ```
 
 **Docker Tags Created:**
-- `ghcr.io/urbany/chatwoot:v4.8.1-feature-name`
-- `ghcr.io/urbany/chatwoot:4.8.1`
-- `ghcr.io/urbany/chatwoot:4.8`
+- `ghcr.io/urbany/chatwoot:v4.12.1-feature-name`
+- `ghcr.io/urbany/chatwoot:4.12.1`
+- `ghcr.io/urbany/chatwoot:4.12`
 
 ### 4. Manual Docker Build
 1. Go to: https://github.com/urbany/chatwoot/actions/workflows/build-custom-docker.yml
@@ -171,14 +171,14 @@ spec:
     spec:
       containers:
       - name: chatwoot
-        image: ghcr.io/urbany/chatwoot:v4.8.1-whatsapp-templates
+        image: ghcr.io/urbany/chatwoot:v4.12.1-whatsapp-templates
         imagePullPolicy: Always
 ```
 
 ### Deploy New Version
 ```bash
 # Update image tag
-kubectl set image deployment/chatwoot chatwoot=ghcr.io/urbany/chatwoot:v4.8.1-whatsapp-templates
+kubectl set image deployment/chatwoot chatwoot=ghcr.io/urbany/chatwoot:v4.12.1-whatsapp-templates
 
 # Or apply updated manifest
 kubectl apply -f deployment.yaml
@@ -210,8 +210,8 @@ git merge --no-commit --no-ff custom-v4.8.0-whatsapp
 ### Verify Docker Image
 ```bash
 # Pull and test locally
-docker pull ghcr.io/urbany/chatwoot:v4.8.1-whatsapp-templates
-docker run -p 3000:3000 ghcr.io/urbany/chatwoot:v4.8.1-whatsapp-templates
+docker pull ghcr.io/urbany/chatwoot:v4.12.1-whatsapp-templates
+docker run -p 3000:3000 ghcr.io/urbany/chatwoot:v4.12.1-whatsapp-templates
 ```
 
 ## 📝 Release Checklist

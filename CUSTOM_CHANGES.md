@@ -2,10 +2,10 @@
 
 This document tracks all custom changes made to the Chatwoot codebase for easy porting to future versions.
 
-## Version 4.8.1-whatsapp-templates
+## Version v4.12.1-whatsapp-templates
 
 ### Date
-2025-04-07
+2026-04-07
 
 ### Features Added
 - **WhatsApp Templates Management UI**
