@@ -20,11 +20,11 @@ class Whatsapp::CsatTemplateService
 
   def delete_template(template_name = nil)
     template_name ||= CsatTemplateNameService.csat_template_name(@whatsapp_channel.inbox.id)
-    response = HTTParty.delete(
-      "#{business_account_path}/message_templates?name=#{template_name}",
-      headers: api_headers
-    )
-    { success: response.success?, response_body: response.body }
+    response = @whatsapp_channel.delete_template(template_name)
+    { success: true, response_body: response.body }
+  rescue StandardError => e
+    Rails.logger.error "WhatsApp template deletion failed: #{e.message}"
+    { success: false, response_body: e.message }
   end
 
   def get_template_status(template_name)
@@ -96,11 +96,7 @@ class Whatsapp::CsatTemplateService
   end
 
   def send_template_creation_request(request_body)
-    HTTParty.post(
-      "#{business_account_path}/message_templates",
-      headers: api_headers,
-      body: request_body.to_json
-    )
+    @whatsapp_channel.provider_service.send(:post_message_template, request_body)
   end
 
   def process_template_creation_response(response, template_config = {})

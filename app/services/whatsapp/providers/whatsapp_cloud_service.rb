@@ -38,6 +38,23 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     whatsapp_channel.update(message_templates: templates, message_templates_last_updated: Time.now.utc) if templates.present?
   end
 
+  def create_template(payload)
+    response = post_message_template(payload)
+    return parsed_template_response(response) if response.success?
+
+    raise template_response_error(response)
+  end
+
+  def delete_template(template_name)
+    response = HTTParty.delete(
+      "#{business_account_path}/message_templates?name=#{template_name}",
+      headers: api_headers
+    )
+    return response if response.success?
+
+    raise template_response_error(response)
+  end
+
   def fetch_whatsapp_templates(url)
     response = HTTParty.get(url)
     return [] unless response.success?
@@ -96,6 +113,27 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
   def business_account_path
     "#{api_base_path}/v14.0/#{whatsapp_channel.provider_config['business_account_id']}"
+  end
+
+  def post_message_template(body)
+    HTTParty.post(
+      "#{business_account_path}/message_templates",
+      headers: api_headers,
+      body: body.to_json
+    )
+  end
+
+  def parsed_template_response(response)
+    return response.parsed_response if response.respond_to?(:parsed_response) && response.parsed_response.present?
+
+    response
+  end
+
+  def template_response_error(response)
+    parsed_response = response.parsed_response if response.respond_to?(:parsed_response)
+    return parsed_response.dig('error', 'message') if parsed_response.respond_to?(:dig)
+
+    parsed_response.presence || response.body
   end
 
   def send_text_message(phone_number, message)

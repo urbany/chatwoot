@@ -5,8 +5,18 @@ import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
 import whatsappChannelAPI from 'dashboard/api/channel/whatsappChannel';
+import Button from 'dashboard/components-next/button/Button.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
-import Icon from 'dashboard/components-next/icon/Icon.vue';
+
+import WhatsAppTemplateEditorDialog from './whatsappTemplates/WhatsAppTemplateEditorDialog.vue';
+
+const props = defineProps({
+  inbox: {
+    type: Object,
+    default: () => ({}),
+  },
+});
 
 const route = useRoute();
 const store = useStore();
@@ -14,9 +24,27 @@ const { t } = useI18n();
 const templates = ref([]);
 const isLoading = ref(false);
 const isRefreshing = ref(false);
+const isCreating = ref(false);
+const isDeleting = ref(false);
 const error = ref(null);
+const isEditorOpen = ref(false);
+const deleteDialog = ref(null);
+const selectedTemplate = ref(null);
 
 const inboxId = computed(() => route.params.inboxId);
+const currentInbox = computed(() =>
+  props.inbox?.id
+    ? props.inbox
+    : store.getters['inboxes/getInbox'](inboxId.value)
+);
+const isWhatsAppCloudInbox = computed(
+  () => currentInbox.value?.provider === 'whatsapp_cloud'
+);
+const deleteConfirmDescription = computed(() =>
+  t('INBOX_MGMT.WHATSAPP_TEMPLATES.DELETE_CONFIRM', {
+    name: selectedTemplate.value?.name || '',
+  })
+);
 
 const fetchTemplates = async () => {
   isLoading.value = true;
@@ -44,6 +72,57 @@ const refreshTemplates = async () => {
     useAlert(t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
   } finally {
     isRefreshing.value = false;
+  }
+};
+
+const createTemplate = async templatePayload => {
+  isCreating.value = true;
+  try {
+    await store.dispatch('inboxes/createWhatsAppTemplate', {
+      inboxId: inboxId.value,
+      template: templatePayload,
+    });
+    await fetchTemplates();
+    isEditorOpen.value = false;
+    useAlert(t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.SUCCESS.CREATE'));
+  } catch (errorResponse) {
+    const message =
+      errorResponse.response?.data?.errors?.[0] ||
+      t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.ERROR.CREATE_FAILED');
+    useAlert(message);
+  } finally {
+    isCreating.value = false;
+  }
+};
+
+const openDeleteDialog = template => {
+  selectedTemplate.value = template;
+  deleteDialog.value?.open();
+};
+
+const clearSelectedTemplate = () => {
+  selectedTemplate.value = null;
+};
+
+const deleteSelectedTemplate = async () => {
+  if (!selectedTemplate.value) return;
+
+  isDeleting.value = true;
+  try {
+    await store.dispatch('inboxes/deleteWhatsAppTemplate', {
+      inboxId: inboxId.value,
+      name: selectedTemplate.value.name,
+    });
+    deleteDialog.value?.close();
+    await fetchTemplates();
+    useAlert(t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.SUCCESS.DELETE'));
+  } catch (errorResponse) {
+    const message =
+      errorResponse.response?.data?.errors?.[0] ||
+      t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.ERROR.DELETE_FAILED');
+    useAlert(message);
+  } finally {
+    isDeleting.value = false;
   }
 };
 
@@ -97,19 +176,26 @@ onMounted(() => {
           {{ $t('INBOX_MGMT.WHATSAPP_TEMPLATES.DESCRIPTION') }}
         </p>
       </div>
-      <button
-        :disabled="isRefreshing || isLoading"
-        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-n-alpha-black2 outline outline-1 outline-n-weak hover:outline-n-slate-6 dark:hover:outline-n-slate-6 hover:bg-n-alpha-2 dark:hover:bg-n-solid-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-slate-700 dark:text-slate-300"
-        :title="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_TEMPLATES_SYNC_BUTTON')"
-        @click="refreshTemplates"
-      >
-        <Icon
-          icon="i-lucide-refresh-ccw"
-          class="size-4"
-          :class="{ 'animate-spin': isRefreshing }"
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          v-if="isWhatsAppCloudInbox"
+          icon="i-lucide-plus"
+          :label="$t('INBOX_MGMT.WHATSAPP_TEMPLATES.NEW_TEMPLATE')"
+          :disabled="isLoading"
+          @click="isEditorOpen = true"
         />
-        {{ $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_TEMPLATES_SYNC_BUTTON') }}
-      </button>
+        <Button
+          faded
+          slate
+          icon="i-lucide-refresh-ccw"
+          :class="{ '[&_.i-lucide-refresh-ccw]:animate-spin': isRefreshing }"
+          :disabled="isRefreshing || isLoading"
+          :label="
+            $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_TEMPLATES_SYNC_BUTTON')
+          "
+          @click="refreshTemplates"
+        />
+      </div>
     </div>
 
     <div v-if="isLoading" class="flex items-center justify-center h-64">
@@ -165,6 +251,16 @@ onMounted(() => {
               }}</span>
             </div>
           </div>
+          <Button
+            v-if="isWhatsAppCloudInbox"
+            icon="i-lucide-trash"
+            slate
+            ghost
+            type="button"
+            :disabled="isDeleting"
+            :title="$t('INBOX_MGMT.WHATSAPP_TEMPLATES.DELETE_TEMPLATE')"
+            @click="openDeleteDialog(template)"
+          />
         </div>
 
         <div
@@ -221,5 +317,25 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <WhatsAppTemplateEditorDialog
+      v-model:open="isEditorOpen"
+      :is-saving="isCreating"
+      @save="createTemplate"
+    />
+
+    <Dialog
+      ref="deleteDialog"
+      type="alert"
+      :title="$t('INBOX_MGMT.WHATSAPP_TEMPLATES.DELETE_TEMPLATE')"
+      :description="deleteConfirmDescription"
+      :confirm-button-label="
+        $t('INBOX_MGMT.WHATSAPP_TEMPLATES.DELETE_TEMPLATE')
+      "
+      :cancel-button-label="$t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.CANCEL')"
+      :is-loading="isDeleting"
+      @confirm="deleteSelectedTemplate"
+      @close="clearSelectedTemplate"
+    />
   </div>
 </template>

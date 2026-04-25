@@ -1248,7 +1248,7 @@ export default {
         </div>
       </div>
       <div v-if="selectedTabKey === 'whatsapp-templates'" class="mx-8">
-        <WhatsAppTemplatesPage />
+        <WhatsAppTemplatesPage :inbox="inbox" />
       </div>
     </section>
   </div>
