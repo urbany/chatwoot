@@ -16,6 +16,10 @@ class WhatsappChannel extends ApiClient {
       inbox_id: inboxId,
     });
   }
+
+  getTemplates(inboxId) {
+    return axios.get(`${this.baseUrl()}/inboxes/${inboxId}/whatsapp_templates`);
+  }
 }
 
 export default new WhatsappChannel();

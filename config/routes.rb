@@ -273,6 +273,7 @@ Rails.application.routes.draw do
 
           resources :inboxes, only: [] do
             resource :assignment_policy, only: [:show, :create, :destroy], module: :inboxes
+            resources :whatsapp_templates, only: [:index], module: :inboxes
           end
 
           namespace :twitter do
