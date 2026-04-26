@@ -1,5 +1,10 @@
+# rubocop:disable Metrics/ClassLength
 class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseService
+  class TemplateRequestTimeoutError < RuntimeError; end
+
   TEMPLATE_REQUEST_TIMEOUT = 10
+  TEMPLATE_RECOVERY_TIMEOUT = 3
+  TEMPLATE_REQUEST_TIMEOUT_MESSAGE = 'WhatsApp API request timed out. Template state will sync shortly.'.freeze
   TEMPLATE_API_VERSION = 'v25.0'.freeze
 
   def send_message(phone_number, message)
@@ -51,91 +56,42 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def create_template(payload)
+    template_name = template_name(payload)
     log_template_info(
       'Create requested',
       action: 'create_template',
-      template_name: payload[:name] || payload['name'],
-      category: payload[:category] || payload['category']
+      template_name: template_name,
+      category: template_category(payload)
     )
 
     response = post_message_template(payload)
-    if response.success?
-      template_response = parsed_template_response(response)
-      log_template_info(
-        'Create succeeded',
-        action: 'create_template',
-        template_name: payload[:name] || payload['name'],
-        template_id: template_response['id'],
-        template_status: template_response['status']
-      )
-      return template_response
-    end
+    return created_template_response(response, template_name) if response.success?
 
-    error_message = template_response_error(response)
-    log_template_error(
-      'Create failed',
-      action: 'create_template',
-      template_name: payload[:name] || payload['name'],
-      error: error_message,
-      error_payload: template_error_payload(response)
-    )
-
-    raise error_message
+    raise_create_template_error(response, template_name)
   rescue Net::OpenTimeout, Net::ReadTimeout => e
-    log_template_error(
-      'Create timed out',
-      action: 'create_template',
-      template_name: payload[:name] || payload['name'],
-      error: e.message
-    )
-    raise 'WhatsApp API request timed out. Please try again.'
+    recover_created_template(template_name, e)
   end
 
   def delete_template(template_name)
     log_template_info('Delete requested', action: 'delete_template', template_name: template_name)
 
-    response = HTTParty.delete(
-      "#{message_templates_path}?name=#{template_name}",
-      headers: api_headers,
-      timeout: TEMPLATE_REQUEST_TIMEOUT
-    )
+    response = delete_message_template(template_name)
     if response.success?
       log_template_info('Delete succeeded', action: 'delete_template', template_name: template_name)
       return response
     end
 
-    error_message = template_response_error(response)
-    log_template_error(
-      'Delete failed',
-      action: 'delete_template',
-      template_name: template_name,
-      error: error_message,
-      error_payload: template_error_payload(response)
-    )
-
-    raise error_message
+    raise_delete_template_error(response, template_name)
   rescue Net::OpenTimeout, Net::ReadTimeout => e
-    log_template_error('Delete timed out', action: 'delete_template', template_name: template_name, error: e.message)
-    raise 'WhatsApp API request timed out. Please try again.'
+    handle_delete_template_timeout(template_name, e)
   end
 
   def fetch_whatsapp_templates(url, page: 1)
     response = HTTParty.get(url, headers: api_headers)
-    unless response.success?
-      log_template_error(
-        'Template fetch failed',
-        action: 'fetch_templates',
-        page: page,
-        request_url: url,
-        error: template_response_error(response),
-        error_payload: template_error_payload(response)
-      )
-      return []
-    end
+    return handle_template_fetch_failure(response, url, page) unless response.success?
 
     templates = response['data'] || []
-
-    next_url = next_url(response)
+    next_page_url = next_url(response)
 
     log_template_info(
       'Template page fetched',
@@ -143,10 +99,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       page: page,
       request_url: url,
       fetched_count: templates.length,
-      has_next_page: next_url.present?
+      has_next_page: next_page_url.present?
     )
 
-    return templates + fetch_whatsapp_templates(next_url, page: page + 1) if next_url.present?
+    return templates + fetch_whatsapp_templates(next_page_url, page: page + 1) if next_page_url.present?
 
     templates
   rescue Net::OpenTimeout, Net::ReadTimeout => e
@@ -227,10 +183,118 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     )
   end
 
+  def delete_message_template(template_name)
+    HTTParty.delete(
+      "#{message_templates_path}?name=#{template_name}",
+      headers: api_headers,
+      timeout: TEMPLATE_REQUEST_TIMEOUT
+    )
+  end
+
   def parsed_template_response(response)
     return response.parsed_response if response.respond_to?(:parsed_response) && response.parsed_response.present?
 
     response
+  end
+
+  def created_template_response(response, template_name)
+    template_response = parsed_template_response(response)
+    log_template_info(
+      'Create succeeded',
+      action: 'create_template',
+      template_name: template_name,
+      template_id: template_response['id'],
+      template_status: template_response['status']
+    )
+    template_response
+  end
+
+  def raise_create_template_error(response, template_name)
+    error_message = template_response_error(response)
+    log_template_error(
+      'Create failed',
+      action: 'create_template',
+      template_name: template_name,
+      error: error_message,
+      error_payload: template_error_payload(response)
+    )
+    raise error_message
+  end
+
+  def recover_created_template(template_name, error)
+    log_template_error('Create timed out', action: 'create_template', template_name: template_name, error: error.message)
+
+    recovered_template = fetch_template_by_name(template_name)
+    return log_recovered_template(template_name, recovered_template) if recovered_template.present?
+
+    raise TemplateRequestTimeoutError, TEMPLATE_REQUEST_TIMEOUT_MESSAGE
+  end
+
+  def raise_delete_template_error(response, template_name)
+    error_message = template_response_error(response)
+    log_template_error(
+      'Delete failed',
+      action: 'delete_template',
+      template_name: template_name,
+      error: error_message,
+      error_payload: template_error_payload(response)
+    )
+    raise error_message
+  end
+
+  def handle_delete_template_timeout(template_name, error)
+    log_template_error('Delete timed out', action: 'delete_template', template_name: template_name, error: error.message)
+    return true if fetch_template_by_name(template_name).blank?
+
+    raise TemplateRequestTimeoutError, TEMPLATE_REQUEST_TIMEOUT_MESSAGE
+  end
+
+  def handle_template_fetch_failure(response, url, page)
+    log_template_error(
+      'Template fetch failed',
+      action: 'fetch_templates',
+      page: page,
+      request_url: url,
+      error: template_response_error(response),
+      error_payload: template_error_payload(response)
+    )
+    []
+  end
+
+  def fetch_template_by_name(template_name)
+    return if template_name.blank?
+
+    response = HTTParty.get(
+      "#{message_templates_path}?name=#{CGI.escape(template_name)}",
+      headers: api_headers,
+      timeout: TEMPLATE_RECOVERY_TIMEOUT
+    )
+
+    return unless response.success?
+
+    parsed_template_response(response).fetch('data', []).find { |template| template['name'] == template_name }
+  rescue Net::OpenTimeout, Net::ReadTimeout => e
+    log_template_error('Template recovery lookup timed out', action: 'fetch_template_by_name', template_name: template_name, error: e.message)
+    nil
+  end
+
+  def log_recovered_template(template_name, recovered_template)
+    log_template_info(
+      'Create recovered after timeout',
+      action: 'create_template',
+      template_name: template_name,
+      template_id: recovered_template['id'],
+      template_status: recovered_template['status']
+    )
+    recovered_template
+  end
+
+  def template_name(payload)
+    payload[:name] || payload['name']
+  end
+
+  def template_category(payload)
+    payload[:category] || payload['category']
   end
 
   def template_response_error(response)
@@ -371,3 +435,4 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     process_response(response, message)
   end
 end
+# rubocop:enable Metrics/ClassLength

@@ -1,5 +1,48 @@
 # Custom Changes
 
+## Version v4.13.0-whatsapp-templates-v4
+
+Date: 2026-04-26
+
+Builds on `v4.13.0-whatsapp-templates-v3` with production timeout recovery for WhatsApp Cloud template create and delete flows. When Meta applies a template change but the synchronous Chatwoot request times out, the provider now rechecks Graph API by template name and returns the upstream state when available. If the timeout remains unresolved, Chatwoot still enqueues a background template sync so the inbox cache converges automatically.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_cloud_service.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp_cloud_service_spec.rb`
+
+### Backend
+
+- Adds a typed WhatsApp template timeout error so controller handling can distinguish provider timeouts from ordinary validation and API failures.
+- Rechecks the WhatsApp Cloud `message_templates` endpoint by template name after create and delete timeouts and treats the operation as successful when Meta already applied the change.
+- Enqueues `Channels::Whatsapp::TemplatesSyncJob` when a create or delete timeout cannot be reconciled immediately so the local `message_templates` cache still refreshes.
+- Returns a clearer user-facing timeout message that explains template state will sync shortly instead of implying an unknown failure.
+
+### Frontend
+
+- No frontend changes in this iteration.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- No WhatsApp Graph API version upgrade in this iteration.
+
+### Breaking Changes
+
+- None for existing inbox configuration.
+- Create and delete remain exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- This release specifically addresses production cases where Meta creates a template upstream but Chatwoot times out before receiving the response.
+- If a provider timeout still cannot be reconciled inline, allow the queued background template sync to refresh the local template list.
+
 ## Version v4.13.0-whatsapp-templates-v3
 
 Date: 2026-04-26

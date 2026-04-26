@@ -263,6 +263,12 @@ describe Whatsapp::Providers::WhatsappCloudService do
       )
     end
 
+    let(:template_lookup_url) { "#{message_templates_url}?name=welcome_template" }
+
+    let(:template_lookup_response) do
+      instance_double(HTTParty::Response, success?: true, parsed_response: { 'data' => [] })
+    end
+
     it 'posts template payload with an explicit timeout' do
       expect(HTTParty).to receive(:post).with(
         message_templates_url,
@@ -276,11 +282,33 @@ describe Whatsapp::Providers::WhatsappCloudService do
       expect(service.create_template(payload)).to eq({ 'id' => 'template_id', 'status' => 'PENDING' })
     end
 
-    it 'raises a user-friendly error when the Meta API times out' do
+    it 'returns the recovered template when create times out after Meta accepts it' do
       allow(HTTParty).to receive(:post).and_raise(Net::ReadTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(
+        instance_double(
+          HTTParty::Response,
+          success?: true,
+          parsed_response: {
+            'data' => [{ 'id' => 'template_id', 'name' => 'welcome_template', 'status' => 'PENDING' }]
+          }
+        )
+      )
+
+      expect(service.create_template(payload)).to eq({ 'id' => 'template_id', 'name' => 'welcome_template', 'status' => 'PENDING' })
+    end
+
+    it 'raises a user-friendly error when the Meta API timeout cannot be reconciled' do
+      allow(HTTParty).to receive(:post).and_raise(Net::ReadTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(template_lookup_response)
 
       expect { service.create_template(payload) }
-        .to raise_error(RuntimeError, 'WhatsApp API request timed out. Please try again.')
+        .to raise_error(described_class::TemplateRequestTimeoutError, described_class::TEMPLATE_REQUEST_TIMEOUT_MESSAGE)
     end
   end
 
@@ -288,6 +316,8 @@ describe Whatsapp::Providers::WhatsappCloudService do
     let(:success_response) do
       instance_double(HTTParty::Response, success?: true)
     end
+
+    let(:template_lookup_url) { "#{message_templates_url}?name=welcome_template" }
 
     it 'sends delete requests with an explicit timeout' do
       expect(HTTParty).to receive(:delete).with(
@@ -301,11 +331,33 @@ describe Whatsapp::Providers::WhatsappCloudService do
       expect(service.delete_template('welcome_template')).to eq(success_response)
     end
 
-    it 'raises a user-friendly error when delete times out' do
+    it 'returns success when delete times out but Meta already deleted the template' do
       allow(HTTParty).to receive(:delete).and_raise(Net::OpenTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(instance_double(HTTParty::Response, success?: true, parsed_response: { 'data' => [] }))
+
+      expect(service.delete_template('welcome_template')).to be(true)
+    end
+
+    it 'raises a user-friendly error when delete timeout cannot be reconciled' do
+      allow(HTTParty).to receive(:delete).and_raise(Net::OpenTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(
+        instance_double(
+          HTTParty::Response,
+          success?: true,
+          parsed_response: {
+            'data' => [{ 'id' => 'template_id', 'name' => 'welcome_template', 'status' => 'PENDING' }]
+          }
+        )
+      )
 
       expect { service.delete_template('welcome_template') }
-        .to raise_error(RuntimeError, 'WhatsApp API request timed out. Please try again.')
+        .to raise_error(described_class::TemplateRequestTimeoutError, described_class::TEMPLATE_REQUEST_TIMEOUT_MESSAGE)
     end
   end
 

@@ -38,18 +38,11 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     log_template_info('Create requested', action: 'create', template_name: payload['name'], category: payload['category'])
 
     response = @inbox.channel.create_template(payload)
-    Channels::Whatsapp::TemplatesSyncJob.perform_later(@inbox.channel)
-
-    created_template = format_template(build_created_template(payload, response))
-    log_template_info(
-      'Create succeeded',
-      action: 'create',
-      template_name: created_template[:name],
-      template_id: created_template[:id],
-      template_status: created_template[:status]
-    )
-
-    render json: created_template
+    schedule_template_sync
+    render_created_template(payload, response)
+  rescue Whatsapp::Providers::WhatsappCloudService::TemplateRequestTimeoutError => e
+    schedule_template_sync_after_timeout(action: 'create', template_name: params[:name])
+    render json: { errors: [e.message] }, status: :unprocessable_entity
   rescue StandardError => e
     log_template_error('Create failed', action: 'create', template_name: params[:name], error: e.message)
     render json: { errors: [e.message] }, status: :unprocessable_entity
@@ -58,9 +51,12 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   def destroy
     log_template_info('Delete requested', action: 'destroy', template_name: params[:id])
     @inbox.channel.delete_template(params[:id])
-    Channels::Whatsapp::TemplatesSyncJob.perform_later(@inbox.channel)
+    schedule_template_sync
     log_template_info('Delete succeeded', action: 'destroy', template_name: params[:id])
     head :no_content
+  rescue Whatsapp::Providers::WhatsappCloudService::TemplateRequestTimeoutError => e
+    schedule_template_sync_after_timeout(action: 'destroy', template_name: params[:id])
+    render json: { errors: [e.message] }, status: :unprocessable_entity
   rescue StandardError => e
     log_template_error('Delete failed', action: 'destroy', template_name: params[:id], error: e.message)
     render json: { errors: [e.message] }, status: :unprocessable_entity
@@ -184,5 +180,26 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
 
   def log_template_error(message, extra = {})
     Rails.logger.error("[WHATSAPP TEMPLATES] #{message} #{template_log_context(extra).to_json}")
+  end
+
+  def render_created_template(payload, response)
+    created_template = format_template(build_created_template(payload, response))
+    log_template_info(
+      'Create succeeded',
+      action: 'create',
+      template_name: created_template[:name],
+      template_id: created_template[:id],
+      template_status: created_template[:status]
+    )
+    render json: created_template
+  end
+
+  def schedule_template_sync
+    Channels::Whatsapp::TemplatesSyncJob.perform_later(@inbox.channel)
+  end
+
+  def schedule_template_sync_after_timeout(action:, template_name:)
+    schedule_template_sync
+    log_template_info('Sync scheduled after timeout', action: action, template_name: template_name)
   end
 end
