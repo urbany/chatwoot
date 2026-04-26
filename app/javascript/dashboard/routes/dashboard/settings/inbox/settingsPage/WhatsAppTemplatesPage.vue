@@ -18,6 +18,15 @@ const props = defineProps({
   },
 });
 
+const STATUS_ORDER = [
+  'PENDING',
+  'REJECTED',
+  'PAUSED',
+  'DISABLED',
+  'APPROVED',
+  'UNKNOWN',
+];
+
 const route = useRoute();
 const store = useStore();
 const { t } = useI18n();
@@ -30,6 +39,7 @@ const error = ref(null);
 const isEditorOpen = ref(false);
 const deleteDialog = ref(null);
 const selectedTemplate = ref(null);
+const activeStatusFilter = ref('ALL');
 
 const inboxId = computed(() => route.params.inboxId);
 const currentInbox = computed(() =>
@@ -45,13 +55,150 @@ const deleteConfirmDescription = computed(() =>
     name: selectedTemplate.value?.name || '',
   })
 );
+const totalTemplatesLabel = computed(() =>
+  t('INBOX_MGMT.WHATSAPP_TEMPLATES.SUMMARY', {
+    count: templates.value.length,
+  })
+);
+const statusLabels = computed(() => ({
+  APPROVED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS.APPROVED'),
+  PENDING: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS.PENDING'),
+  REJECTED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS.REJECTED'),
+  PAUSED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS.PAUSED'),
+  DISABLED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS.DISABLED'),
+  UNKNOWN: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS.UNKNOWN'),
+}));
+const statusHints = computed(() => ({
+  APPROVED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS_HINTS.APPROVED'),
+  PENDING: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS_HINTS.PENDING'),
+  REJECTED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS_HINTS.REJECTED'),
+  PAUSED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS_HINTS.PAUSED'),
+  DISABLED: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS_HINTS.DISABLED'),
+  UNKNOWN: t('INBOX_MGMT.WHATSAPP_TEMPLATES.STATUS_HINTS.UNKNOWN'),
+}));
+
+const normalizeStatus = status => status?.toUpperCase() || 'UNKNOWN';
+
+const getStatusRank = status => {
+  const normalizedStatus = normalizeStatus(status);
+  const index = STATUS_ORDER.indexOf(normalizedStatus);
+  return index === -1 ? STATUS_ORDER.length : index;
+};
+
+const compareTemplates = (leftTemplate, rightTemplate) => {
+  const statusDifference =
+    getStatusRank(leftTemplate.status) - getStatusRank(rightTemplate.status);
+
+  if (statusDifference !== 0) {
+    return statusDifference;
+  }
+
+  return (leftTemplate.name || '').localeCompare(rightTemplate.name || '');
+};
+
+const setTemplates = nextTemplates => {
+  templates.value = [...(nextTemplates || [])].sort(compareTemplates);
+
+  const availableStatuses = new Set(
+    templates.value.map(template => normalizeStatus(template.status))
+  );
+
+  if (
+    activeStatusFilter.value !== 'ALL' &&
+    !availableStatuses.has(activeStatusFilter.value)
+  ) {
+    activeStatusFilter.value = 'ALL';
+  }
+};
+
+const templateKey = template =>
+  `${template.name || ''}:${template.language || ''}`;
+
+const upsertTemplate = template => {
+  const normalizedStatus = normalizeStatus(template.status);
+  const nextTemplates = templates.value.filter(
+    currentTemplate => templateKey(currentTemplate) !== templateKey(template)
+  );
+
+  if (
+    activeStatusFilter.value !== 'ALL' &&
+    activeStatusFilter.value !== normalizedStatus
+  ) {
+    activeStatusFilter.value = normalizedStatus;
+  }
+
+  setTemplates([template, ...nextTemplates]);
+};
+
+const removeTemplatesByName = templateName => {
+  setTemplates(
+    templates.value.filter(template => template.name !== templateName)
+  );
+};
+
+const statusCounts = computed(() =>
+  templates.value.reduce((counts, template) => {
+    const normalizedStatus = normalizeStatus(template.status);
+    return {
+      ...counts,
+      [normalizedStatus]: (counts[normalizedStatus] || 0) + 1,
+    };
+  }, {})
+);
+
+const getStatusLabel = status =>
+  statusLabels.value[normalizeStatus(status)] || normalizeStatus(status);
+
+const getStatusHint = status =>
+  statusHints.value[normalizeStatus(status)] || '';
+
+const statusFilters = computed(() => {
+  const filters = [
+    {
+      key: 'ALL',
+      label: t('INBOX_MGMT.WHATSAPP_TEMPLATES.FILTERS.ALL'),
+      count: templates.value.length,
+    },
+  ];
+
+  STATUS_ORDER.filter(status => statusCounts.value[status]).forEach(status => {
+    filters.push({
+      key: status,
+      label: getStatusLabel(status),
+      count: statusCounts.value[status],
+    });
+  });
+
+  Object.keys(statusCounts.value)
+    .filter(status => !STATUS_ORDER.includes(status))
+    .sort()
+    .forEach(status => {
+      filters.push({
+        key: status,
+        label: getStatusLabel(status),
+        count: statusCounts.value[status],
+      });
+    });
+
+  return filters;
+});
+
+const filteredTemplates = computed(() => {
+  if (activeStatusFilter.value === 'ALL') {
+    return templates.value;
+  }
+
+  return templates.value.filter(
+    template => normalizeStatus(template.status) === activeStatusFilter.value
+  );
+});
 
 const fetchTemplates = async () => {
   isLoading.value = true;
   error.value = null;
   try {
     const response = await whatsappChannelAPI.getTemplates(inboxId.value);
-    templates.value = response.data || [];
+    setTemplates(response.data || []);
   } catch (errorResponse) {
     error.value =
       errorResponse.response?.data?.error ||
@@ -66,8 +213,7 @@ const refreshTemplates = async () => {
   isRefreshing.value = true;
   try {
     await store.dispatch('inboxes/syncTemplates', inboxId.value);
-    await fetchTemplates();
-    useAlert(t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_TEMPLATES_SYNC_SUCCESS'));
+    useAlert(t('INBOX_MGMT.WHATSAPP_TEMPLATES.SYNC_REQUESTED'));
   } catch (errorResponse) {
     useAlert(t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
   } finally {
@@ -78,11 +224,14 @@ const refreshTemplates = async () => {
 const createTemplate = async templatePayload => {
   isCreating.value = true;
   try {
-    await store.dispatch('inboxes/createWhatsAppTemplate', {
-      inboxId: inboxId.value,
-      template: templatePayload,
-    });
-    await fetchTemplates();
+    const createdTemplate = await store.dispatch(
+      'inboxes/createWhatsAppTemplate',
+      {
+        inboxId: inboxId.value,
+        template: templatePayload,
+      }
+    );
+    upsertTemplate(createdTemplate);
     isEditorOpen.value = false;
     useAlert(t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.SUCCESS.CREATE'));
   } catch (errorResponse) {
@@ -109,12 +258,13 @@ const deleteSelectedTemplate = async () => {
 
   isDeleting.value = true;
   try {
+    const templateName = selectedTemplate.value.name;
     await store.dispatch('inboxes/deleteWhatsAppTemplate', {
       inboxId: inboxId.value,
-      name: selectedTemplate.value.name,
+      name: templateName,
     });
+    removeTemplatesByName(templateName);
     deleteDialog.value?.close();
-    await fetchTemplates();
     useAlert(t('INBOX_MGMT.WHATSAPP_TEMPLATES.EDITOR.SUCCESS.DELETE'));
   } catch (errorResponse) {
     const message =
@@ -133,9 +283,13 @@ const getStatusColor = status => {
     PENDING:
       'text-yellow-700 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30',
     REJECTED: 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/30',
+    PAUSED:
+      'text-orange-700 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30',
+    DISABLED:
+      'text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-700/70',
   };
   return (
-    colors[status?.toUpperCase()] ||
+    colors[normalizeStatus(status)] ||
     'text-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-800'
   );
 };
@@ -198,6 +352,44 @@ onMounted(() => {
       </div>
     </div>
 
+    <div
+      class="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300"
+    >
+      {{ $t('INBOX_MGMT.WHATSAPP_TEMPLATES.SYNC_HINT') }}
+    </div>
+
+    <div v-if="!isLoading && templates.length" class="mb-4 flex flex-col gap-3">
+      <div class="text-sm font-medium text-slate-700 dark:text-slate-300">
+        {{ totalTemplatesLabel }}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="filter in statusFilters"
+          :key="filter.key"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors"
+          :class="
+            activeStatusFilter === filter.key
+              ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-100'
+          "
+          @click="activeStatusFilter = filter.key"
+        >
+          <span>{{ filter.label }}</span>
+          <span
+            class="rounded-full px-2 py-0.5 text-xs"
+            :class="
+              activeStatusFilter === filter.key
+                ? 'bg-white/20 text-white dark:bg-slate-900/15 dark:text-slate-900'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'
+            "
+          >
+            {{ filter.count }}
+          </span>
+        </button>
+      </div>
+    </div>
+
     <div v-if="isLoading" class="flex items-center justify-center h-64">
       <div
         class="flex flex-col items-center gap-3 text-slate-600 dark:text-slate-400"
@@ -219,9 +411,21 @@ onMounted(() => {
       </p>
     </div>
 
+    <div
+      v-else-if="filteredTemplates.length === 0"
+      class="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400"
+    >
+      <p class="text-lg font-medium">
+        {{ $t('INBOX_MGMT.WHATSAPP_TEMPLATES.NO_FILTER_MATCH') }}
+      </p>
+      <p class="mt-2 text-sm text-center max-w-xl">
+        {{ $t('INBOX_MGMT.WHATSAPP_TEMPLATES.SYNC_HINT') }}
+      </p>
+    </div>
+
     <div v-else class="grid grid-cols-1 gap-4">
       <div
-        v-for="template in templates"
+        v-for="template in filteredTemplates"
         :key="`${template.name}-${template.language}`"
         class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
       >
@@ -237,7 +441,7 @@ onMounted(() => {
                 class="text-xs px-2 py-1 rounded-full font-medium"
                 :class="getStatusColor(template.status)"
               >
-                {{ template.status?.toUpperCase() }}
+                {{ getStatusLabel(template.status) }}
               </span>
               <span
                 v-if="template.category"
@@ -250,6 +454,12 @@ onMounted(() => {
                 template.language
               }}</span>
             </div>
+            <p
+              v-if="getStatusHint(template.status)"
+              class="mt-2 text-sm text-slate-600 dark:text-slate-300"
+            >
+              {{ getStatusHint(template.status) }}
+            </p>
           </div>
           <Button
             v-if="isWhatsAppCloudInbox"
@@ -261,6 +471,36 @@ onMounted(() => {
             :title="$t('INBOX_MGMT.WHATSAPP_TEMPLATES.DELETE_TEMPLATE')"
             @click="openDeleteDialog(template)"
           />
+        </div>
+
+        <div
+          v-if="template.rejected_reason"
+          class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300"
+        >
+          <span class="font-medium">
+            {{ `${$t('INBOX_MGMT.WHATSAPP_TEMPLATES.REJECTED_REASON')}:` }}
+          </span>
+          {{ template.rejected_reason }}
+        </div>
+
+        <div
+          v-if="template.sub_category || template.parameter_format"
+          class="mb-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400"
+        >
+          <span
+            v-if="template.sub_category"
+            class="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-900/60"
+          >
+            {{ `${$t('INBOX_MGMT.WHATSAPP_TEMPLATES.SUB_CATEGORY')}:` }}
+            {{ template.sub_category }}
+          </span>
+          <span
+            v-if="template.parameter_format"
+            class="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-900/60"
+          >
+            {{ `${$t('INBOX_MGMT.WHATSAPP_TEMPLATES.PARAMETER_FORMAT')}:` }}
+            {{ template.parameter_format }}
+          </span>
         </div>
 
         <div
