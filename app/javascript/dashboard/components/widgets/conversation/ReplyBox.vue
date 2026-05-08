@@ -349,6 +349,12 @@ export default {
     sendWithSignature() {
       return this.fetchSignatureFlagFromUISettings(this.channelType);
     },
+    effectiveChannelType() {
+      return getEffectiveChannelType(
+        this.channelType,
+        this.inbox?.medium || ''
+      );
+    },
     conversationId() {
       return this.currentChat.id;
     },
@@ -635,14 +641,17 @@ export default {
         return message;
       }
 
-      const effectiveChannelType = getEffectiveChannelType(
-        this.channelType,
-        this.inbox?.medium || ''
-      );
-
       return this.sendWithSignature
-        ? appendSignature(message, this.messageSignature, effectiveChannelType)
-        : removeSignature(message, this.messageSignature, effectiveChannelType);
+        ? appendSignature(
+            message,
+            this.messageSignature,
+            this.effectiveChannelType
+          )
+        : removeSignature(
+            message,
+            this.messageSignature,
+            this.effectiveChannelType
+          );
     },
     removeFromDraft() {
       if (this.conversationIdByRoute) {
@@ -940,14 +949,10 @@ export default {
       this.clearCopilotAcceptedMessage();
       if (this.sendWithSignature && !this.isPrivate) {
         // if signature is enabled, append it to the message
-        const effectiveChannelType = getEffectiveChannelType(
-          this.channelType,
-          this.inbox?.medium || ''
-        );
         this.message = appendSignature(
           this.message,
           this.messageSignature,
-          effectiveChannelType
+          this.effectiveChannelType
         );
       }
       this.attachedFiles = [];

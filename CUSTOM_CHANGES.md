@@ -1,5 +1,139 @@
 # Custom Changes
 
+## Version v4.13.0-whatsapp-templates-v7
+
+Date: 2026-05-11
+
+Builds on `v4.13.0-whatsapp-templates-v6` by reverting the WhatsApp frontend signature injection flow and moving the WhatsApp header behavior to the backend using each agent profile's display name.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/components/widgets/conversation/ReplyBox.vue`
+- (MODIFIED) `app/javascript/dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_cloud_service.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp_cloud_service_spec.rb`
+
+### Backend
+
+- Adds WhatsApp message header injection in `WhatsappCloudService` using `message.sender.display_name` (fallback to sender name) with format `*Display Name:*` followed by one newline.
+- Applies the same header to text messages and attachment captions (where captions are supported) so WhatsApp output is consistent.
+- Keeps message rendering pipeline unchanged for non-WhatsApp channels.
+
+### Frontend
+
+- Reverts WhatsApp-specific frontend signature overrides introduced in v6.
+- Restores the default signature toggle behavior and default editor signature handling across channels.
+- Removes WhatsApp-only payload injection from `ReplyBox` so WhatsApp header behavior is backend-driven.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- No WhatsApp Graph API version upgrade in this patch.
+
+### Breaking Changes
+
+- None for existing inbox configuration.
+- Create and delete remain exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- Agent display names now drive the WhatsApp header prefix sent to customers.
+- Signature behavior in the composer is back to Chatwoot default behavior.
+
+## Version v4.13.0-whatsapp-templates-v6
+
+Date: 2026-05-08
+
+Builds on `v4.13.0-whatsapp-templates-v5` with a WhatsApp signature fix: signature is now enabled by default for WhatsApp, hidden from the editor text area, and injected only at send time.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/components/widgets/conversation/ReplyBox.vue`
+- (MODIFIED) `app/javascript/dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue`
+- (MODIFIED) `app/services/messages/markdown_renderer_service.rb`
+- (MODIFIED) `spec/services/messages/markdown_renderer_service_spec.rb`
+
+### Backend
+
+- Reverts the v5 markdown renderer signature transformation in `Messages::MarkdownRendererService`.
+- Keeps WhatsApp markdown rendering behavior aligned with upstream to avoid signature parsing side effects.
+
+### Frontend
+
+- Enables signature by default for WhatsApp channels when no explicit UI setting exists yet.
+- Stops appending signature text into the reply editor for WhatsApp channels.
+- Injects signature only when constructing WhatsApp send payloads (including attachment captions) in `ReplyBox`.
+- Uses the format `**signature:**` followed by one newline and message content for WhatsApp message payloads.
+- Keeps non-WhatsApp channels on existing signature behavior.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- No WhatsApp Graph API version upgrade in this patch.
+
+### Breaking Changes
+
+- None for existing inbox configuration.
+- Create and delete remain exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- Existing drafts with footer-style signatures are normalized by removing the in-editor footer signature for WhatsApp.
+- Signature visibility in editor remains unchanged for non-WhatsApp channels.
+
+## Version v4.13.0-whatsapp-templates-v5
+
+Date: 2026-05-08
+
+Builds on `v4.13.0-whatsapp-templates-v4` with WhatsApp-only operator signature formatting that moves the signature from the footer to the top of the outgoing message in bold.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/services/messages/markdown_renderer_service.rb`
+- (MODIFIED) `spec/services/messages/markdown_renderer_service_spec.rb`
+
+### Backend
+
+- Adds a WhatsApp-only signature transformation in `Messages::MarkdownRendererService` that rewrites the existing footer signature pattern (`--`) into a top header before markdown rendering.
+- Formats WhatsApp signatures as bold header text followed by a single newline and the original message body.
+- Preserves fallback behavior when no signature footer exists, so non-signature messages continue unchanged.
+- Applies the same behavior to Twilio inboxes when the medium is WhatsApp.
+
+### Frontend
+
+- No frontend changes in this iteration.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- No WhatsApp Graph API version upgrade in this patch.
+
+### Breaking Changes
+
+- None for existing inbox configuration.
+- Signature repositioning applies only to WhatsApp channel rendering.
+- Create and delete remain exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- Existing operator signatures continue to be configured through the same profile setting.
+- Other channels keep the previous signature behavior (footer style), while WhatsApp now renders signatures at the top.
+
 ## Version v4.13.0-whatsapp-templates-v4
 
 Date: 2026-04-26

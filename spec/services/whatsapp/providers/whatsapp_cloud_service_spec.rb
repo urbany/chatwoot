@@ -29,6 +29,11 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
   describe '#send_message' do
     context 'when called' do
+      before do
+        message.sender.update!(display_name: 'Maddu')
+        message_with_reply.sender.update!(display_name: 'Maddu')
+      end
+
       it 'calls message endpoints for normal messages' do
         stub_request(:post, phone_messages_url)
           .with(
@@ -36,7 +41,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
               messaging_product: 'whatsapp',
               context: nil,
               to: '+123456789',
-              text: { body: message.content },
+              text: { body: "*Maddu:*\n#{message.content}" },
               type: 'text'
             }.to_json
           )
@@ -53,7 +58,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
                 message_id: message.source_id
               },
               to: '+123456789',
-              text: { body: message_with_reply.content },
+              text: { body: "*Maddu:*\n#{message_with_reply.content}" },
               type: 'text'
             }.to_json
           )
@@ -71,7 +76,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
                                    messaging_product: 'whatsapp',
                                    to: '+123456789',
                                    type: 'image',
-                                   image: WebMock::API.hash_including({ caption: message.content, link: anything })
+                                   image: WebMock::API.hash_including({ caption: "*Maddu:*\n#{message.content}", link: anything })
                                  })
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
@@ -90,10 +95,34 @@ describe Whatsapp::Providers::WhatsappCloudService do
                                    messaging_product: 'whatsapp',
                                    to: '+123456789',
                                    type: 'document',
-                                   document: WebMock::API.hash_including({ filename: 'sample.pdf', caption: message.content, link: anything })
+                                   document: WebMock::API.hash_including(
+                                     {
+                                       filename: 'sample.pdf',
+                                       caption: "*Maddu:*\n#{message.content}",
+                                       link: anything
+                                     }
+                                   )
                                  })
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+        expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
+      it 'falls back to sender name when display_name is blank' do
+        message.sender.update!(display_name: '')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: "*#{message.sender.name}:*\n#{message.content}" },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
         expect(service.send_message('+123456789', message)).to eq 'message_id'
       end
     end
