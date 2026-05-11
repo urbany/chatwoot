@@ -4,7 +4,9 @@
 
 Date: 2026-05-11
 
-Builds on `v4.13.0-whatsapp-templates-v6` by reverting the WhatsApp frontend signature injection flow and moving the WhatsApp header behavior to the backend using each agent profile's display name.
+**RELEASE NOTE**: This is the final production release combining v5 + v6 + v7 iterations into a single squashed commit. It delivers WhatsApp agent display name headers via backend injection.
+
+Implements WhatsApp agent identification through backend display_name header injection (instead of signature footer transformation or frontend injection overrides). This is the definitive version; intermediate patches v5 and v6 have been deprecated and removed.
 
 ### Files Modified
 
