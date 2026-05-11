@@ -7,12 +7,13 @@ describe Whatsapp::Providers::WhatsappCloudService do
   let(:whatsapp_channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
 
   let(:message) do
-    create(:message, conversation: conversation, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox, source_id: 'external_id')
+    create(:message, conversation: conversation, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox,
+                     source_id: 'external_id', content_attributes: { whatsapp_agent_header_enabled: true })
   end
 
   let(:message_with_reply) do
     create(:message, conversation: conversation, message_type: :outgoing, content: 'reply', inbox: whatsapp_channel.inbox,
-                     content_attributes: { in_reply_to: message.id })
+                     content_attributes: { in_reply_to: message.id, whatsapp_agent_header_enabled: true })
   end
 
   let(:response_headers) { { 'Content-Type' => 'application/json' } }
@@ -29,6 +30,11 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
   describe '#send_message' do
     context 'when called' do
+      before do
+        message.sender.update!(display_name: 'Maddu')
+        message_with_reply.sender.update!(display_name: 'Maddu')
+      end
+
       it 'calls message endpoints for normal messages' do
         stub_request(:post, phone_messages_url)
           .with(
@@ -36,7 +42,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
               messaging_product: 'whatsapp',
               context: nil,
               to: '+123456789',
-              text: { body: message.content },
+              text: { body: "*Maddu:*\n#{message.content}" },
               type: 'text'
             }.to_json
           )
@@ -53,7 +59,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
                 message_id: message.source_id
               },
               to: '+123456789',
-              text: { body: message_with_reply.content },
+              text: { body: "*Maddu:*\n#{message_with_reply.content}" },
               type: 'text'
             }.to_json
           )
@@ -71,7 +77,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
                                    messaging_product: 'whatsapp',
                                    to: '+123456789',
                                    type: 'image',
-                                   image: WebMock::API.hash_including({ caption: message.content, link: anything })
+                                   image: WebMock::API.hash_including({ caption: "*Maddu:*\n#{message.content}", link: anything })
                                  })
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
@@ -90,11 +96,96 @@ describe Whatsapp::Providers::WhatsappCloudService do
                                    messaging_product: 'whatsapp',
                                    to: '+123456789',
                                    type: 'document',
-                                   document: WebMock::API.hash_including({ filename: 'sample.pdf', caption: message.content, link: anything })
+                                   document: WebMock::API.hash_including(
+                                     {
+                                       filename: 'sample.pdf',
+                                       caption: "*Maddu:*\n#{message.content}",
+                                       link: anything
+                                     }
+                                   )
                                  })
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
         expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
+      it 'falls back to sender name when display_name is blank' do
+        message.sender.update!(display_name: '')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: "*#{message.sender.name}:*\n#{message.content}" },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
+      it 'does not prefix messages when the dashboard UI flag is missing' do
+        api_message = create(:message, conversation: conversation, message_type: :outgoing, content: 'test',
+                                       inbox: whatsapp_channel.inbox, source_id: 'external_id')
+        api_message.sender.update!(display_name: 'Maddu')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: api_message.content },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', api_message)).to eq 'message_id'
+      end
+
+      it 'does not double-prefix messages that were already injected before persistence' do
+        prefixed_message = create(:message, conversation: conversation, message_type: :outgoing,
+                                            content: "**Maddu:**\ntest", inbox: whatsapp_channel.inbox,
+                                            source_id: 'external_id', content_attributes: { whatsapp_agent_header_enabled: true })
+        prefixed_message.sender.update!(display_name: 'Maddu')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: "*Maddu:*\ntest" },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', prefixed_message)).to eq 'message_id'
+      end
+
+      it 'does not prefix agent bot messages even if the flag is present' do
+        bot_message = create(:message, conversation: conversation, message_type: :outgoing, content: 'test',
+                                       inbox: whatsapp_channel.inbox, sender: create(:agent_bot, account: conversation.account),
+                                       content_attributes: { whatsapp_agent_header_enabled: true })
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: bot_message.content },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', bot_message)).to eq 'message_id'
       end
     end
   end
@@ -105,12 +196,14 @@ describe Whatsapp::Providers::WhatsappCloudService do
         message = create(:message, message_type: :outgoing, content: 'test',
                                    inbox: whatsapp_channel.inbox, content_type: 'input_select',
                                    content_attributes: {
+                                     whatsapp_agent_header_enabled: true,
                                      items: [
                                        { title: 'Burito', value: 'Burito' },
                                        { title: 'Pasta', value: 'Pasta' },
                                        { title: 'Sushi', value: 'Sushi' }
                                      ]
                                    })
+        message.sender.update!(display_name: 'Maddu')
         stub_request(:post, phone_messages_url)
           .with(
             body: {
@@ -118,7 +211,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
               interactive: {
                 type: 'button',
                 body: {
-                  text: 'test'
+                  text: "*Maddu:*\ntest"
                 },
                 action: '{"buttons":[{"type":"reply","reply":{"id":"Burito","title":"Burito"}},{"type":"reply",' \
                         '"reply":{"id":"Pasta","title":"Pasta"}},{"type":"reply","reply":{"id":"Sushi","title":"Sushi"}}]}'
@@ -131,7 +224,9 @@ describe Whatsapp::Providers::WhatsappCloudService do
       it 'calls message endpoints with list payload when number of items is greater than 3' do
         items = %w[Burito Pasta Sushi Salad].map { |i| { title: i, value: i } }
         message = create(:message, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox,
-                                   content_type: 'input_select', content_attributes: { items: items })
+                                   content_type: 'input_select',
+                                   content_attributes: { items: items, whatsapp_agent_header_enabled: true })
+        message.sender.update!(display_name: 'Maddu')
 
         expected_action = {
           button: I18n.t('conversations.messages.whatsapp.list_button_label'),
@@ -145,7 +240,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
               interactive: {
                 type: 'list',
                 body: {
-                  text: 'test'
+                  text: "*Maddu:*\ntest"
                 },
                 action: expected_action
               },

@@ -329,6 +329,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def send_text_message(phone_number, message)
+    outgoing_content = whatsapp_outgoing_content(message)
+
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
@@ -336,7 +338,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
         messaging_product: 'whatsapp',
         context: whatsapp_reply_context(message),
         to: phone_number,
-        text: { body: message.outgoing_content },
+        text: { body: outgoing_content },
         type: 'text'
       }.to_json
     )
@@ -347,11 +349,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def send_attachment_message(phone_number, message)
     attachment = message.attachments.first
     type = %w[image audio video].include?(attachment.file_type) ? attachment.file_type : 'document'
-    type_content = {
-      'link': attachment.download_url
-    }
-    type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type)
-    type_content['filename'] = attachment.file.filename if type == 'document'
+    outgoing_content = whatsapp_outgoing_content(message)
+
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
@@ -360,7 +359,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
         :context => whatsapp_reply_context(message),
         'to' => phone_number,
         'type' => type,
-        type.to_s => type_content
+        type.to_s => attachment_type_content(attachment, type, outgoing_content)
       }.to_json
     )
 
@@ -416,6 +415,16 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     {
       message_id: reply_to
     }
+  end
+
+  def attachment_type_content(attachment, type, outgoing_content)
+    type_content = {
+      'link': attachment.download_url
+    }
+
+    type_content['caption'] = outgoing_content unless %w[audio sticker].include?(type)
+    type_content['filename'] = attachment.file.filename if type == 'document'
+    type_content
   end
 
   def send_interactive_text_message(phone_number, message)

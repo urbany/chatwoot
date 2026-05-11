@@ -347,7 +347,17 @@ export default {
       return !!this.messageSignature;
     },
     sendWithSignature() {
+      if (this.isAWhatsAppChannel) {
+        return false;
+      }
+
       return this.fetchSignatureFlagFromUISettings(this.channelType);
+    },
+    effectiveChannelType() {
+      return getEffectiveChannelType(
+        this.channelType,
+        this.inbox?.medium || ''
+      );
     },
     conversationId() {
       return this.currentChat.id;
@@ -635,14 +645,17 @@ export default {
         return message;
       }
 
-      const effectiveChannelType = getEffectiveChannelType(
-        this.channelType,
-        this.inbox?.medium || ''
-      );
-
       return this.sendWithSignature
-        ? appendSignature(message, this.messageSignature, effectiveChannelType)
-        : removeSignature(message, this.messageSignature, effectiveChannelType);
+        ? appendSignature(
+            message,
+            this.messageSignature,
+            this.effectiveChannelType
+          )
+        : removeSignature(
+            message,
+            this.messageSignature,
+            this.effectiveChannelType
+          );
     },
     removeFromDraft() {
       if (this.conversationIdByRoute) {
@@ -940,14 +953,10 @@ export default {
       this.clearCopilotAcceptedMessage();
       if (this.sendWithSignature && !this.isPrivate) {
         // if signature is enabled, append it to the message
-        const effectiveChannelType = getEffectiveChannelType(
-          this.channelType,
-          this.inbox?.medium || ''
-        );
         this.message = appendSignature(
           this.message,
           this.messageSignature,
-          effectiveChannelType
+          this.effectiveChannelType
         );
       }
       this.attachedFiles = [];
@@ -1054,6 +1063,19 @@ export default {
 
       return payload;
     },
+    setWhatsAppAgentHeaderFlag(payload) {
+      if (!this.isAWhatsAppChannel || payload.private) {
+        return payload;
+      }
+
+      return {
+        ...payload,
+        contentAttributes: {
+          ...payload.contentAttributes,
+          whatsapp_agent_header_enabled: true,
+        },
+      };
+    },
     getMultipleMessagesPayload(message) {
       const multipleMessagePayload = [];
 
@@ -1073,6 +1095,8 @@ export default {
           };
 
           attachmentPayload = this.setReplyToInPayload(attachmentPayload);
+          attachmentPayload =
+            this.setWhatsAppAgentHeaderFlag(attachmentPayload);
           multipleMessagePayload.push(attachmentPayload);
           // For WhatsApp, only the first attachment gets a caption
           if (!this.isAnInstagramChannel) caption = '';
@@ -1097,6 +1121,7 @@ export default {
         };
 
         messagePayload = this.setReplyToInPayload(messagePayload);
+        messagePayload = this.setWhatsAppAgentHeaderFlag(messagePayload);
 
         multipleMessagePayload.push(messagePayload);
       }
@@ -1113,6 +1138,7 @@ export default {
         sender: this.sender,
       };
       messagePayload = this.setReplyToInPayload(messagePayload);
+      messagePayload = this.setWhatsAppAgentHeaderFlag(messagePayload);
 
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];
