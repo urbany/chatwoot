@@ -76,10 +76,33 @@ class Twilio::SendOnTwilioService < Base::SendOnChannelService
 
   def message_params
     {
-      body: message.outgoing_content,
+      body: outgoing_body,
       to: contact_inbox.source_id,
       media_url: attachments
     }
+  end
+
+  def outgoing_body
+    content = message.outgoing_content.to_s
+    return content unless whatsapp_agent_header_enabled?
+
+    sender_name = message.sender.try(:available_name).presence || message.sender&.name.presence
+    return content if sender_name.blank?
+
+    header = "*#{sender_name}:*"
+    return header if content.blank?
+
+    "#{header}\n#{content}"
+  end
+
+  def whatsapp_agent_header_enabled?
+    return false unless channel.whatsapp?
+
+    ActiveModel::Type::Boolean.new.cast(message.content_attributes['whatsapp_agent_header_enabled']) &&
+      message.sender.is_a?(User) &&
+      message.content_attributes['automation_rule_id'].blank? &&
+      message.content_attributes['external_echo'].blank? &&
+      message.additional_attributes['campaign_id'].blank?
   end
 
   def attachments

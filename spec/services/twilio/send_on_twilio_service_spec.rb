@@ -64,6 +64,68 @@ describe Twilio::SendOnTwilioService do
 
         expect(outgoing_message.reload.source_id).to eq('1234')
       end
+
+      it 'prefixes Twilio WhatsApp messages from the agent UI with display_name' do
+        allow(messages_double).to receive(:create).and_return(message_record_double)
+        allow(message_record_double).to receive(:sid).and_return('1234')
+
+        outgoing_message = create(
+          :message,
+          message_type: 'outgoing',
+          inbox: twilio_whatsapp_inbox,
+          account: account,
+          conversation: create(:conversation, contact: contact, inbox: twilio_whatsapp_inbox,
+                                              contact_inbox: create(:contact_inbox, contact: contact, inbox: twilio_whatsapp_inbox)),
+          content: 'test',
+          content_attributes: { whatsapp_agent_header_enabled: true }
+        )
+        outgoing_message.sender.update!(display_name: 'Maddu')
+
+        described_class.new(message: outgoing_message).perform
+
+        expect(messages_double).to have_received(:create).with(hash_including(body: "*Maddu:*\ntest"))
+      end
+
+      it 'falls back to sender name for Twilio WhatsApp when display_name is blank' do
+        allow(messages_double).to receive(:create).and_return(message_record_double)
+        allow(message_record_double).to receive(:sid).and_return('1234')
+
+        outgoing_message = create(
+          :message,
+          message_type: 'outgoing',
+          inbox: twilio_whatsapp_inbox,
+          account: account,
+          conversation: create(:conversation, contact: contact, inbox: twilio_whatsapp_inbox,
+                                              contact_inbox: create(:contact_inbox, contact: contact, inbox: twilio_whatsapp_inbox)),
+          content: 'test',
+          content_attributes: { whatsapp_agent_header_enabled: true }
+        )
+        outgoing_message.sender.update!(display_name: '')
+
+        described_class.new(message: outgoing_message).perform
+
+        expect(messages_double).to have_received(:create).with(hash_including(body: "*#{outgoing_message.sender.name}:*\ntest"))
+      end
+
+      it 'does not prefix Twilio WhatsApp messages when the UI flag is missing' do
+        allow(messages_double).to receive(:create).and_return(message_record_double)
+        allow(message_record_double).to receive(:sid).and_return('1234')
+
+        outgoing_message = create(
+          :message,
+          message_type: 'outgoing',
+          inbox: twilio_whatsapp_inbox,
+          account: account,
+          conversation: create(:conversation, contact: contact, inbox: twilio_whatsapp_inbox,
+                                              contact_inbox: create(:contact_inbox, contact: contact, inbox: twilio_whatsapp_inbox)),
+          content: 'test'
+        )
+        outgoing_message.sender.update!(display_name: 'Maddu')
+
+        described_class.new(message: outgoing_message).perform
+
+        expect(messages_double).to have_received(:create).with(hash_including(body: 'test'))
+      end
     end
 
     it 'if outgoing message has attachment and is for whatsapp' do

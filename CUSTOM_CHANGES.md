@@ -1,5 +1,31 @@
 # Custom Changes
 
+## Version v4.13.0-whatsapp-templates-v9
+
+Date: 2026-05-11
+
+Fixes the missing WhatsApp agent header for Twilio WhatsApp inboxes. The previous v8 release covered WhatsApp Cloud and 360dialog paths, but Twilio WhatsApp uses a separate send service that also needed the same UI-only human-agent header injection.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/services/twilio/send_on_twilio_service.rb`
+- (MODIFIED) `spec/services/twilio/send_on_twilio_service_spec.rb`
+
+### Backend
+
+- Applies the same UI-only WhatsApp agent header injection to `Twilio::SendOnTwilioService` when the Twilio channel medium is WhatsApp.
+- Preserves the same guardrails as v8: only human agent sends flagged by the dashboard UI receive the header.
+- Falls back from `display_name` to the regular agent `name` when no public name is set.
+
+### Frontend
+
+- No additional frontend changes. The existing dashboard payload flag from v8 is now honored by the Twilio WhatsApp send path too.
+
+### Upgrade Notes
+
+- Twilio WhatsApp conversations now match the WhatsApp Cloud and 360dialog behavior for agent public-name headers.
+
 ## Version v4.13.0-whatsapp-templates-v8
 
 Date: 2026-05-11
