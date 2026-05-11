@@ -417,17 +417,6 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     }
   end
 
-  def whatsapp_outgoing_content(message)
-    content = message.outgoing_content.to_s
-    display_name = message.sender&.display_name.presence || message.sender&.name.presence
-    return content if display_name.blank?
-
-    header = "*#{display_name}:*"
-    return header if content.blank?
-
-    "#{header}\n#{content}"
-  end
-
   def attachment_type_content(attachment, type, outgoing_content)
     type_content = {
       'link': attachment.download_url

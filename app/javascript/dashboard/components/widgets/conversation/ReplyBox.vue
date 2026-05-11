@@ -1059,6 +1059,19 @@ export default {
 
       return payload;
     },
+    setWhatsAppAgentHeaderFlag(payload) {
+      if (!this.isAWhatsAppChannel || payload.private) {
+        return payload;
+      }
+
+      return {
+        ...payload,
+        contentAttributes: {
+          ...payload.contentAttributes,
+          whatsapp_agent_header_enabled: true,
+        },
+      };
+    },
     getMultipleMessagesPayload(message) {
       const multipleMessagePayload = [];
 
@@ -1078,6 +1091,8 @@ export default {
           };
 
           attachmentPayload = this.setReplyToInPayload(attachmentPayload);
+          attachmentPayload =
+            this.setWhatsAppAgentHeaderFlag(attachmentPayload);
           multipleMessagePayload.push(attachmentPayload);
           // For WhatsApp, only the first attachment gets a caption
           if (!this.isAnInstagramChannel) caption = '';
@@ -1102,6 +1117,7 @@ export default {
         };
 
         messagePayload = this.setReplyToInPayload(messagePayload);
+        messagePayload = this.setWhatsAppAgentHeaderFlag(messagePayload);
 
         multipleMessagePayload.push(messagePayload);
       }
@@ -1118,6 +1134,7 @@ export default {
         sender: this.sender,
       };
       messagePayload = this.setReplyToInPayload(messagePayload);
+      messagePayload = this.setWhatsAppAgentHeaderFlag(messagePayload);
 
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];

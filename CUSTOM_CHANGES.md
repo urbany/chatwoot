@@ -1,10 +1,42 @@
 # Custom Changes
 
+## Version v4.13.0-whatsapp-templates-v8
+
+Date: 2026-05-11
+
+Fixes the WhatsApp agent header injection so it applies consistently to session messages sent by human agents from the dashboard UI across all WhatsApp providers. The backend now injects the agent `available_name` (`display_name` with fallback to `name`) for Cloud, 360dialog, and interactive WhatsApp messages without exposing that header in the composer textarea, while leaving bot and API-triggered sends unchanged.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/services/whatsapp/providers/base_service.rb`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_cloud_service.rb`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_360_dialog_service.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp_cloud_service_spec.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp360_dialog_service_spec.rb`
+
+### Backend
+
+- Moves WhatsApp header formatting into `Whatsapp::Providers::BaseService` so all providers share the same injection logic.
+- Applies the header to text messages, attachment captions, and interactive message bodies for both WhatsApp Cloud and 360dialog providers when the message was flagged by the dashboard UI as a human agent send.
+- Uses `available_name` so `display_name` is preferred and `name` is used automatically when no public name is set.
+- Leaves bot sends, external/API-triggered sends, and template message payloads unchanged in this iteration.
+
+### Frontend
+
+- Adds an internal-only payload flag in the dashboard reply flow so the backend can distinguish UI agent sends from other message sources while keeping the header hidden from the composer.
+
+### Upgrade Notes
+
+- WhatsApp session messages now show the agent public name at the top when present, with automatic fallback to the regular name.
+
 ## Version v4.13.0-whatsapp-templates-v7
 
 Date: 2026-05-11
 
-Builds on `v4.13.0-whatsapp-templates-v6` by reverting the WhatsApp frontend signature injection flow and moving the WhatsApp header behavior to the backend using each agent profile's display name.
+**RELEASE NOTE**: This is the final production release combining v5 + v6 + v7 iterations into a single squashed commit. It delivers WhatsApp agent display name headers via backend injection.
+
+Implements WhatsApp agent identification through backend display_name header injection (instead of signature footer transformation or frontend injection overrides). This is the definitive version; intermediate patches v5 and v6 have been deprecated and removed.
 
 ### Files Modified
 

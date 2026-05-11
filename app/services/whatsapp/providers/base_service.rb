@@ -101,7 +101,7 @@ class Whatsapp::Providers::BaseService
   def create_button_payload(message)
     buttons = create_buttons(message.content_attributes['items'])
     json_hash = { 'buttons' => buttons }
-    create_payload('button', message.outgoing_content, JSON.generate(json_hash))
+    create_payload('button', whatsapp_outgoing_content(message), JSON.generate(json_hash))
   end
 
   def create_list_payload(message)
@@ -109,6 +109,27 @@ class Whatsapp::Providers::BaseService
     section1 = { 'rows' => rows }
     sections = [section1]
     json_hash = { :button => I18n.t('conversations.messages.whatsapp.list_button_label'), 'sections' => sections }
-    create_payload('list', message.outgoing_content, JSON.generate(json_hash))
+    create_payload('list', whatsapp_outgoing_content(message), JSON.generate(json_hash))
+  end
+
+  def whatsapp_outgoing_content(message)
+    content = message.outgoing_content.to_s
+    return content unless whatsapp_agent_header_enabled?(message)
+
+    sender_name = message.sender.try(:available_name).presence || message.sender&.name.presence
+    return content if sender_name.blank?
+
+    header = "*#{sender_name}:*"
+    return header if content.blank?
+
+    "#{header}\n#{content}"
+  end
+
+  def whatsapp_agent_header_enabled?(message)
+    ActiveModel::Type::Boolean.new.cast(message.content_attributes['whatsapp_agent_header_enabled']) &&
+      message.sender.is_a?(User) &&
+      message.content_attributes['automation_rule_id'].blank? &&
+      message.content_attributes['external_echo'].blank? &&
+      message.additional_attributes['campaign_id'].blank?
   end
 end
