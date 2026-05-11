@@ -130,6 +130,9 @@ class Messages::MessageBuilder
   end
 
   def message_params
+    message_content_attributes = content_attributes
+    message_content_attributes = message_content_attributes.merge(whatsapp_agent_header_enabled: true) if should_enable_whatsapp_agent_header?
+
     {
       account_id: @conversation.account_id,
       inbox_id: @conversation.inbox_id,
@@ -138,12 +141,16 @@ class Messages::MessageBuilder
       private: @private,
       sender: sender,
       content_type: @params[:content_type],
-      content_attributes: content_attributes.presence,
+      content_attributes: message_content_attributes.presence,
       items: @items,
       in_reply_to: @in_reply_to,
       echo_id: @params[:echo_id],
       source_id: @params[:source_id]
     }.merge(external_created_at).merge(automation_rule_id).merge(campaign_id).merge(template_params)
+  end
+
+  def should_enable_whatsapp_agent_header?
+    message_type == 'outgoing' && @params[:echo_id].present? && !@private && (@conversation.inbox.whatsapp? || @conversation.inbox.twilio_whatsapp?)
   end
 
   def email_inbox?

@@ -1,5 +1,29 @@
 # Custom Changes
 
+## Version v4.13.0-whatsapp-templates-v10
+
+Date: 2026-05-11
+
+Fixes the remaining gap for direct WhatsApp Cloud inboxes by persisting the UI-send marker in the backend message builder. This avoids depending on the frontend-only payload flag surviving unchanged all the way to the provider job.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/builders/messages/message_builder.rb`
+- (MODIFIED) `app/services/whatsapp/providers/base_service.rb`
+- (MODIFIED) `app/services/twilio/send_on_twilio_service.rb`
+- (MODIFIED) `spec/builders/messages/message_builder_spec.rb`
+
+### Backend
+
+- Persists `whatsapp_agent_header_enabled` automatically in `Messages::MessageBuilder` for outgoing dashboard messages on WhatsApp inboxes when `echo_id` is present.
+- Makes the provider checks use indifferent-access reads for `content_attributes` and `additional_attributes` so the flag is honored reliably after the message is reloaded by `SendReplyJob`.
+- Keeps the existing guardrails for bots, automation, campaigns, and non-UI sends.
+
+### Upgrade Notes
+
+- Direct WhatsApp Cloud UI sends now carry the agent-header marker from message creation through background delivery more reliably.
+
 ## Version v4.13.0-whatsapp-templates-v9
 
 Date: 2026-05-11

@@ -98,11 +98,14 @@ class Twilio::SendOnTwilioService < Base::SendOnChannelService
   def whatsapp_agent_header_enabled?
     return false unless channel.whatsapp?
 
-    ActiveModel::Type::Boolean.new.cast(message.content_attributes['whatsapp_agent_header_enabled']) &&
+    content_attributes = message.content_attributes.with_indifferent_access
+    additional_attributes = message.additional_attributes.with_indifferent_access
+
+    ActiveModel::Type::Boolean.new.cast(content_attributes['whatsapp_agent_header_enabled']) &&
       message.sender.is_a?(User) &&
-      message.content_attributes['automation_rule_id'].blank? &&
-      message.content_attributes['external_echo'].blank? &&
-      message.additional_attributes['campaign_id'].blank?
+      content_attributes['automation_rule_id'].blank? &&
+      content_attributes['external_echo'].blank? &&
+      additional_attributes['campaign_id'].blank?
   end
 
   def attachments
