@@ -19,6 +19,7 @@ module WhatsappAgentHeaderHelper
     message_type == 'outgoing' && echo_id.present? && !private && sender.is_a?(User) && (inbox.whatsapp? || inbox.twilio_whatsapp?)
   end
 
+  # rubocop:disable Metrics/ParameterLists
   def whatsapp_agent_header_payload(content:, content_attributes:, message_type:, echo_id:, private:, sender:, inbox:)
     enabled = whatsapp_ui_agent_header_enabled?(
       message_type: message_type,
@@ -33,6 +34,7 @@ module WhatsappAgentHeaderHelper
       content_attributes: enabled ? content_attributes.merge(whatsapp_agent_header_enabled: true) : content_attributes
     }
   end
+  # rubocop:enable Metrics/ParameterLists
 
   private
 

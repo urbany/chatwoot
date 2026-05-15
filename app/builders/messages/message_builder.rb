@@ -1,3 +1,4 @@
+# rubocop:disable Metrics/ClassLength
 class Messages::MessageBuilder
   include ::FileTypeHelper
   include ::EmailHelper
@@ -126,6 +127,7 @@ class Messages::MessageBuilder
     AgentBot.where(account_id: [nil, @conversation.account.id]).find_by(id: @params[:sender_id])
   end
 
+  # rubocop:disable Metrics/MethodLength
   def message_params
     message_type_value = message_type
     message_sender = sender
@@ -154,6 +156,7 @@ class Messages::MessageBuilder
       source_id: @params[:source_id]
     }.merge(external_created_at).merge(automation_rule_id).merge(campaign_id).merge(template_params)
   end
+  # rubocop:enable Metrics/MethodLength
 
   def email_inbox?
     @conversation.inbox&.inbox_type == 'Email'
@@ -232,5 +235,6 @@ class Messages::MessageBuilder
                                        })
   end
 end
+# rubocop:enable Metrics/ClassLength
 
 Messages::MessageBuilder.prepend_mod_with('Messages::MessageBuilder')
