@@ -1,5 +1,73 @@
 # Custom Changes
 
+## Version v4.14.0-whatsapp-templates-v1
+
+Date: 2026-05-19
+
+Ports the full `v4.13.0-whatsapp-templates-v12` cumulative patch line onto Chatwoot `v4.14.0`. This keeps the WhatsApp templates management UI and API, timeout recovery around WhatsApp Cloud template create/delete calls, manual-send agent header behavior, the template-header truthfulness fix, and the custom CE Docker build workflow. The port was applied from `refs/heads/v4.13.0-whatsapp-templates-cumulative-v12` and merged cleanly apart from mechanical updates in `Settings.vue`, `inboxMgmt.json`, and `whatsapp_cloud_service.rb`.
+
+### Files Modified
+
+- (ADDED) `.github/workflows/build-custom-docker.yml`
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/builders/messages/message_builder.rb`
+- (MODIFIED) `app/controllers/api/v1/accounts/concerns/whatsapp_health_management.rb`
+- (ADDED) `app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb`
+- (MODIFIED) `app/javascript/dashboard/api/channel/whatsappChannel.js`
+- (MODIFIED) `app/javascript/dashboard/components/widgets/conversation/ReplyBox.vue`
+- (MODIFIED) `app/javascript/dashboard/helper/commons.js`
+- (MODIFIED) `app/javascript/dashboard/helper/specs/commons.spec.js`
+- (MODIFIED) `app/javascript/dashboard/helper/templateHelper.js`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json`
+- (MODIFIED) `app/javascript/dashboard/routes/dashboard/settings/inbox/Settings.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/settings/inbox/settingsPage/WhatsAppTemplatesPage.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/settings/inbox/settingsPage/whatsappTemplates/EditorSidebar.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/settings/inbox/settingsPage/whatsappTemplates/TemplatePreviewBubble.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/settings/inbox/settingsPage/whatsappTemplates/WhatsAppTemplateEditorDialog.vue`
+- (MODIFIED) `app/javascript/dashboard/store/modules/inboxes.js`
+- (MODIFIED) `app/models/channel/whatsapp.rb`
+- (ADDED) `app/services/concerns/whatsapp_agent_header_helper.rb`
+- (MODIFIED) `app/services/twilio/send_on_twilio_service.rb`
+- (MODIFIED) `app/services/whatsapp/csat_template_service.rb`
+- (MODIFIED) `app/services/whatsapp/providers/base_service.rb`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_360_dialog_service.rb`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_cloud_service.rb`
+- (MODIFIED) `config/routes.rb`
+- (MODIFIED) `spec/builders/messages/message_builder_spec.rb`
+- (MODIFIED) `spec/models/channel/whatsapp_spec.rb`
+- (MODIFIED) `spec/services/twilio/send_on_twilio_service_spec.rb`
+- (MODIFIED) `spec/services/whatsapp/csat_template_service_spec.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp360_dialog_service_spec.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp_cloud_service_spec.rb`
+
+### Backend
+
+- Preserves the nested WhatsApp template CRUD API, provider delegations, CSAT template integration, and WhatsApp Cloud template sync/cache behavior.
+- Keeps the timeout recovery path for create/delete so Meta-side template changes can still reconcile after a request timeout.
+- Keeps WhatsApp manual UI sends using the explicit `content_attributes[:whatsapp_agent_header_enabled]` gate for the public-name header, while template sends stay header-free unless Meta actually returns one.
+- Preserves provider-specific header injection helpers across WhatsApp Cloud, 360dialog, and Twilio WhatsApp sends.
+- Keeps the Enterprise prepend hook in `WhatsappCloudService` while also retaining the upstream class-length lint footer introduced around `v4.14.0`.
+
+### Frontend
+
+- Preserves the WhatsApp Templates settings tab and editor flow while keeping upstream `v4.14.0` inbox tabs, including Voice configuration, intact.
+- Keeps the local template helper/store/API updates, sync copy, status presentation, and live preview components.
+- Preserves the optimistic reply bubble behavior so manual WhatsApp sends show the public-name header immediately and template sends stay truthful to the eventual stored content.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new runtime environment variables or application configuration.
+- The fork keeps `.github/workflows/build-custom-docker.yml` so pushing the annotated `v4.14.0-whatsapp-templates-v1` tag builds and publishes the CE image in GHCR.
+
+### Upgrade Notes
+
+- This release is a straight port of the full `v4.13.0-whatsapp-templates-v12` patch line onto upstream `v4.14.0`.
+- The monthly port source for the next upgrade should be `refs/heads/v4.14.0-whatsapp-templates-cumulative-v1` once that helper branch is created from this release.
+
 ## Version v4.13.0-whatsapp-templates-v12
 
 Date: 2026-05-19
