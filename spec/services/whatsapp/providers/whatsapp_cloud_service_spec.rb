@@ -7,31 +7,42 @@ describe Whatsapp::Providers::WhatsappCloudService do
   let(:whatsapp_channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
 
   let(:message) do
-    create(:message, conversation: conversation, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox, source_id: 'external_id')
+    create(:message, conversation: conversation, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox,
+                     source_id: 'external_id', content_attributes: { whatsapp_agent_header_enabled: true })
   end
 
   let(:message_with_reply) do
     create(:message, conversation: conversation, message_type: :outgoing, content: 'reply', inbox: whatsapp_channel.inbox,
-                     content_attributes: { in_reply_to: message.id })
+                     content_attributes: { in_reply_to: message.id, whatsapp_agent_header_enabled: true })
   end
 
   let(:response_headers) { { 'Content-Type' => 'application/json' } }
   let(:whatsapp_response) { { messages: [{ id: 'message_id' }] } }
+  let(:message_templates_url) { service.send(:message_templates_path) }
+  let(:phone_messages_url) { "#{service.send(:phone_id_path)}/messages" }
+  let(:next_templates_url) { "#{message_templates_url}?after=cursor_1" }
+  let(:last_templates_url) { "#{message_templates_url}?after=cursor_2" }
 
   before do
-    stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+    stub_request(:get, message_templates_url)
+      .with(headers: service.api_headers)
   end
 
   describe '#send_message' do
     context 'when called' do
+      before do
+        message.sender.update!(display_name: 'Maddu')
+        message_with_reply.sender.update!(display_name: 'Maddu')
+      end
+
       it 'calls message endpoints for normal messages' do
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, phone_messages_url)
           .with(
             body: {
               messaging_product: 'whatsapp',
               context: nil,
               to: '+123456789',
-              text: { body: message.content },
+              text: { body: "*Maddu:*\n#{message.content}" },
               type: 'text'
             }.to_json
           )
@@ -40,7 +51,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
       end
 
       it 'calls message endpoints for a reply to messages' do
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, phone_messages_url)
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -48,7 +59,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
                 message_id: message.source_id
               },
               to: '+123456789',
-              text: { body: message_with_reply.content },
+              text: { body: "*Maddu:*\n#{message_with_reply.content}" },
               type: 'text'
             }.to_json
           )
@@ -60,13 +71,13 @@ describe Whatsapp::Providers::WhatsappCloudService do
         attachment = message.attachments.new(account_id: message.account_id, file_type: :image)
         attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, phone_messages_url)
           .with(
             body: hash_including({
                                    messaging_product: 'whatsapp',
                                    to: '+123456789',
                                    type: 'image',
-                                   image: WebMock::API.hash_including({ caption: message.content, link: anything })
+                                   image: WebMock::API.hash_including({ caption: "*Maddu:*\n#{message.content}", link: anything })
                                  })
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
@@ -79,17 +90,102 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
         # ref: https://github.com/bblimke/webmock/issues/900
         # reason for Webmock::API.hash_including
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, phone_messages_url)
           .with(
             body: hash_including({
                                    messaging_product: 'whatsapp',
                                    to: '+123456789',
                                    type: 'document',
-                                   document: WebMock::API.hash_including({ filename: 'sample.pdf', caption: message.content, link: anything })
+                                   document: WebMock::API.hash_including(
+                                     {
+                                       filename: 'sample.pdf',
+                                       caption: "*Maddu:*\n#{message.content}",
+                                       link: anything
+                                     }
+                                   )
                                  })
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
         expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
+      it 'falls back to sender name when display_name is blank' do
+        message.sender.update!(display_name: '')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: "*#{message.sender.name}:*\n#{message.content}" },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
+      it 'does not prefix messages when the dashboard UI flag is missing' do
+        api_message = create(:message, conversation: conversation, message_type: :outgoing, content: 'test',
+                                       inbox: whatsapp_channel.inbox, source_id: 'external_id')
+        api_message.sender.update!(display_name: 'Maddu')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: api_message.content },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', api_message)).to eq 'message_id'
+      end
+
+      it 'does not double-prefix messages that were already injected before persistence' do
+        prefixed_message = create(:message, conversation: conversation, message_type: :outgoing,
+                                            content: "**Maddu:**\ntest", inbox: whatsapp_channel.inbox,
+                                            source_id: 'external_id', content_attributes: { whatsapp_agent_header_enabled: true })
+        prefixed_message.sender.update!(display_name: 'Maddu')
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: "*Maddu:*\ntest" },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', prefixed_message)).to eq 'message_id'
+      end
+
+      it 'does not prefix agent bot messages even if the flag is present' do
+        bot_message = create(:message, conversation: conversation, message_type: :outgoing, content: 'test',
+                                       inbox: whatsapp_channel.inbox, sender: create(:agent_bot, account: conversation.account),
+                                       content_attributes: { whatsapp_agent_header_enabled: true })
+
+        stub_request(:post, phone_messages_url)
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              context: nil,
+              to: '+123456789',
+              text: { body: bot_message.content },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', bot_message)).to eq 'message_id'
       end
     end
   end
@@ -100,20 +196,22 @@ describe Whatsapp::Providers::WhatsappCloudService do
         message = create(:message, message_type: :outgoing, content: 'test',
                                    inbox: whatsapp_channel.inbox, content_type: 'input_select',
                                    content_attributes: {
+                                     whatsapp_agent_header_enabled: true,
                                      items: [
                                        { title: 'Burito', value: 'Burito' },
                                        { title: 'Pasta', value: 'Pasta' },
                                        { title: 'Sushi', value: 'Sushi' }
                                      ]
                                    })
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        message.sender.update!(display_name: 'Maddu')
+        stub_request(:post, phone_messages_url)
           .with(
             body: {
               messaging_product: 'whatsapp', to: '+123456789',
               interactive: {
                 type: 'button',
                 body: {
-                  text: 'test'
+                  text: "*Maddu:*\ntest"
                 },
                 action: '{"buttons":[{"type":"reply","reply":{"id":"Burito","title":"Burito"}},{"type":"reply",' \
                         '"reply":{"id":"Pasta","title":"Pasta"}},{"type":"reply","reply":{"id":"Sushi","title":"Sushi"}}]}'
@@ -126,21 +224,23 @@ describe Whatsapp::Providers::WhatsappCloudService do
       it 'calls message endpoints with list payload when number of items is greater than 3' do
         items = %w[Burito Pasta Sushi Salad].map { |i| { title: i, value: i } }
         message = create(:message, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox,
-                                   content_type: 'input_select', content_attributes: { items: items })
+                                   content_type: 'input_select',
+                                   content_attributes: { items: items, whatsapp_agent_header_enabled: true })
+        message.sender.update!(display_name: 'Maddu')
 
         expected_action = {
           button: I18n.t('conversations.messages.whatsapp.list_button_label'),
           sections: [{ rows: %w[Burito Pasta Sushi Salad].map { |i| { id: i, title: i } } }]
         }.to_json
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, phone_messages_url)
           .with(
             body: {
               messaging_product: 'whatsapp', to: '+123456789',
               interactive: {
                 type: 'list',
                 body: {
-                  text: 'test'
+                  text: "*Maddu:*\ntest"
                 },
                 action: expected_action
               },
@@ -181,7 +281,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
     context 'when called' do
       it 'calls message endpoints with template params for template messages' do
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, phone_messages_url)
           .with(
             body: template_body.to_json
           )
@@ -195,20 +295,29 @@ describe Whatsapp::Providers::WhatsappCloudService do
   describe '#sync_templates' do
     context 'when called' do
       it 'updated the message templates' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, message_templates_url)
+          .with(headers: service.api_headers)
           .to_return(
             { status: 200, headers: response_headers,
               body: { data: [
                 { id: '123456789', name: 'test_template' }
-              ], paging: { next: 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key' } }.to_json },
+              ], paging: { next: next_templates_url } }.to_json }
+          )
+        stub_request(:get, next_templates_url)
+          .with(headers: service.api_headers)
+          .to_return(
             { status: 200, headers: response_headers,
               body: { data: [
                 { id: '123456789', name: 'next_template' }
-              ], paging: { next: 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key' } }.to_json },
+              ], paging: { next: last_templates_url } }.to_json }
+          )
+        stub_request(:get, last_templates_url)
+          .with(headers: service.api_headers)
+          .to_return(
             { status: 200, headers: response_headers,
               body: { data: [
                 { id: '123456789', name: 'last_template' }
-              ], paging: { prev: 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key' } }.to_json }
+              ], paging: { prev: next_templates_url } }.to_json }
           )
 
         timstamp = whatsapp_channel.reload.message_templates_last_updated
@@ -220,7 +329,8 @@ describe Whatsapp::Providers::WhatsappCloudService do
       end
 
       it 'updates message_templates_last_updated even when template request fails' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, message_templates_url)
+          .with(headers: service.api_headers)
           .to_return(status: 401)
 
         timstamp = whatsapp_channel.reload.message_templates_last_updated
@@ -230,16 +340,135 @@ describe Whatsapp::Providers::WhatsappCloudService do
     end
   end
 
+  describe '#create_template' do
+    let(:payload) do
+      {
+        name: 'welcome_template',
+        language: 'en_US',
+        category: 'UTILITY',
+        components: [{ type: 'BODY', text: 'Hello {{1}}' }]
+      }
+    end
+
+    let(:success_response) do
+      instance_double(
+        HTTParty::Response,
+        success?: true,
+        parsed_response: { 'id' => 'template_id', 'status' => 'PENDING' }
+      )
+    end
+
+    let(:template_lookup_url) { "#{message_templates_url}?name=welcome_template" }
+
+    let(:template_lookup_response) do
+      instance_double(HTTParty::Response, success?: true, parsed_response: { 'data' => [] })
+    end
+
+    it 'posts template payload with an explicit timeout' do
+      expect(HTTParty).to receive(:post).with(
+        message_templates_url,
+        hash_including(
+          headers: service.api_headers,
+          body: payload.to_json,
+          timeout: described_class::TEMPLATE_REQUEST_TIMEOUT
+        )
+      ).and_return(success_response)
+
+      expect(service.create_template(payload)).to eq({ 'id' => 'template_id', 'status' => 'PENDING' })
+    end
+
+    it 'returns the recovered template when create times out after Meta accepts it' do
+      allow(HTTParty).to receive(:post).and_raise(Net::ReadTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(
+        instance_double(
+          HTTParty::Response,
+          success?: true,
+          parsed_response: {
+            'data' => [{ 'id' => 'template_id', 'name' => 'welcome_template', 'status' => 'PENDING' }]
+          }
+        )
+      )
+
+      expect(service.create_template(payload)).to eq({ 'id' => 'template_id', 'name' => 'welcome_template', 'status' => 'PENDING' })
+    end
+
+    it 'raises a user-friendly error when the Meta API timeout cannot be reconciled' do
+      allow(HTTParty).to receive(:post).and_raise(Net::ReadTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(template_lookup_response)
+
+      expect { service.create_template(payload) }
+        .to raise_error(described_class::TemplateRequestTimeoutError, described_class::TEMPLATE_REQUEST_TIMEOUT_MESSAGE)
+    end
+  end
+
+  describe '#delete_template' do
+    let(:success_response) do
+      instance_double(HTTParty::Response, success?: true)
+    end
+
+    let(:template_lookup_url) { "#{message_templates_url}?name=welcome_template" }
+
+    it 'sends delete requests with an explicit timeout' do
+      expect(HTTParty).to receive(:delete).with(
+        "#{message_templates_url}?name=welcome_template",
+        hash_including(
+          headers: service.api_headers,
+          timeout: described_class::TEMPLATE_REQUEST_TIMEOUT
+        )
+      ).and_return(success_response)
+
+      expect(service.delete_template('welcome_template')).to eq(success_response)
+    end
+
+    it 'returns success when delete times out but Meta already deleted the template' do
+      allow(HTTParty).to receive(:delete).and_raise(Net::OpenTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(instance_double(HTTParty::Response, success?: true, parsed_response: { 'data' => [] }))
+
+      expect(service.delete_template('welcome_template')).to be(true)
+    end
+
+    it 'raises a user-friendly error when delete timeout cannot be reconciled' do
+      allow(HTTParty).to receive(:delete).and_raise(Net::OpenTimeout)
+      allow(HTTParty).to receive(:get).with(
+        template_lookup_url,
+        hash_including(headers: service.api_headers, timeout: described_class::TEMPLATE_RECOVERY_TIMEOUT)
+      ).and_return(
+        instance_double(
+          HTTParty::Response,
+          success?: true,
+          parsed_response: {
+            'data' => [{ 'id' => 'template_id', 'name' => 'welcome_template', 'status' => 'PENDING' }]
+          }
+        )
+      )
+
+      expect { service.delete_template('welcome_template') }
+        .to raise_error(described_class::TemplateRequestTimeoutError, described_class::TEMPLATE_REQUEST_TIMEOUT_MESSAGE)
+    end
+  end
+
   describe '#validate_provider_config' do
     context 'when called' do
       it 'returns true if valid' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, message_templates_url)
+          .with(headers: service.api_headers)
         expect(subject.validate_provider_config?).to be(true)
         expect(whatsapp_channel.errors.present?).to be(false)
       end
 
       it 'returns false if invalid' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key').to_return(status: 401)
+        stub_request(:get, message_templates_url)
+          .with(headers: service.api_headers)
+          .to_return(status: 401)
         expect(subject.validate_provider_config?).to be(false)
       end
     end
