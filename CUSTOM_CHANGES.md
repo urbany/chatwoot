@@ -1,5 +1,46 @@
 # Custom Changes
 
+## Version v4.13.0-whatsapp-templates-v12
+
+Date: 2026-05-19
+
+Builds on `v4.13.0-whatsapp-templates-v11` with a truthfulness fix for WhatsApp agent headers. Manual custom WhatsApp sends still show the public-name header at the top, but template sends no longer persist or display that header in Chatwoot when Meta does not actually send it. The optimistic pending bubble for manual sends is also aligned with the final stored message so the agent sees the same header immediately.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/builders/messages/message_builder.rb`
+- (MODIFIED) `app/services/concerns/whatsapp_agent_header_helper.rb`
+- (MODIFIED) `app/javascript/dashboard/components/widgets/conversation/ReplyBox.vue`
+- (MODIFIED) `app/javascript/dashboard/helper/commons.js`
+- (MODIFIED) `app/javascript/dashboard/helper/specs/commons.spec.js`
+- (MODIFIED) `spec/builders/messages/message_builder_spec.rb`
+
+### Backend
+
+- Switches the WhatsApp agent-header gate from implicit `echo_id` detection to the explicit dashboard flag `content_attributes[:whatsapp_agent_header_enabled]`.
+- Prevents template sends from persisting or displaying the agent header in Chatwoot, even when the optimistic send flow still carries an `echo_id`.
+- Keeps manual WhatsApp dashboard sends storing the top header in markdown form so the final Chatwoot bubble matches the delivered manual message.
+
+### Frontend
+
+- Exposes the sender `available_name` in the reply payload so the optimistic pending bubble can mirror the public WhatsApp header.
+- Builds pending-message `content` with the top header only for manual WhatsApp sends that explicitly enable the header.
+- Leaves template pending messages header-free so Chatwoot no longer claims the header was sent when Meta template delivery did not include it.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- Manual custom WhatsApp replies continue to show the public-name header both in Chatwoot and in the delivered message.
+- WhatsApp template sends now show only the actual template content in Chatwoot, with no misleading top header.
+
 ## Version v4.13.0-whatsapp-templates-v11
 
 Date: 2026-05-11

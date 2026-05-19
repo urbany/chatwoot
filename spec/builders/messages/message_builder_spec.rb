@@ -98,7 +98,8 @@ describe Messages::MessageBuilder do
       let(:params) do
         ActionController::Parameters.new({
                                            content: 'test',
-                                           echo_id: 'temp-message-id-1'
+                                           echo_id: 'temp-message-id-1',
+                                           content_attributes: { whatsapp_agent_header_enabled: true }
                                          })
       end
 
@@ -118,7 +119,8 @@ describe Messages::MessageBuilder do
       let(:params) do
         ActionController::Parameters.new({
                                            content: 'test',
-                                           echo_id: 'temp-message-id-1'
+                                           echo_id: 'temp-message-id-1',
+                                           content_attributes: { whatsapp_agent_header_enabled: true }
                                          })
       end
 
@@ -130,6 +132,34 @@ describe Messages::MessageBuilder do
         message = described_class.new(user, conversation, params).perform
 
         expect(message.content).to eq("**#{user.name}:**\ntest")
+      end
+    end
+
+    context 'when the message is a WhatsApp template send' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false, account: account)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           echo_id: 'temp-message-id-1',
+                                           content_attributes: { whatsapp_agent_header_enabled: true },
+                                           template_params: {
+                                             name: 'sample_template',
+                                             category: 'utility',
+                                             language: 'en_US',
+                                             namespace: 'sample-namespace',
+                                             processed_params: {}
+                                           }
+                                         })
+      end
+
+      it 'does not persist the WhatsApp agent header for template sends' do
+        message = described_class.new(user, conversation, params).perform
+
+        expect(message.content).to eq('test')
+        expect(message.content_attributes).not_to include(whatsapp_agent_header_enabled: true)
       end
     end
 

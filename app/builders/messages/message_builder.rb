@@ -127,19 +127,26 @@ class Messages::MessageBuilder
     AgentBot.where(account_id: [nil, @conversation.account.id]).find_by(id: @params[:sender_id])
   end
 
-  # rubocop:disable Metrics/MethodLength
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
   def message_params
     message_type_value = message_type
     message_sender = sender
-    whatsapp_header_payload = whatsapp_agent_header_payload(
-      content: @params[:content],
-      content_attributes: content_attributes,
-      message_type: message_type_value,
-      echo_id: @params[:echo_id],
-      private: @private,
-      sender: message_sender,
-      inbox: @conversation.inbox
-    )
+    sanitized_content_attributes = content_attributes.except(:whatsapp_agent_header_enabled, 'whatsapp_agent_header_enabled')
+    whatsapp_header_payload = if @params[:template_params].present?
+                                {
+                                  content: @params[:content],
+                                  content_attributes: sanitized_content_attributes
+                                }
+                              else
+                                whatsapp_agent_header_payload(
+                                  content: @params[:content],
+                                  content_attributes: content_attributes,
+                                  message_type: message_type_value,
+                                  private: @private,
+                                  sender: message_sender,
+                                  inbox: @conversation.inbox
+                                )
+                              end
 
     {
       account_id: @conversation.account_id,
@@ -156,7 +163,7 @@ class Messages::MessageBuilder
       source_id: @params[:source_id]
     }.merge(external_created_at).merge(automation_rule_id).merge(campaign_id).merge(template_params)
   end
-  # rubocop:enable Metrics/MethodLength
+  # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
   def email_inbox?
     @conversation.inbox&.inbox_type == 'Email'

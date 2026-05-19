@@ -15,15 +15,19 @@ module WhatsappAgentHeaderHelper
     whatsapp_agent_header_content(content: content, sender: sender, format: :storage)
   end
 
-  def whatsapp_ui_agent_header_enabled?(message_type:, echo_id:, private:, sender:, inbox:)
-    message_type == 'outgoing' && echo_id.present? && !private && sender.is_a?(User) && (inbox.whatsapp? || inbox.twilio_whatsapp?)
+  def whatsapp_ui_agent_header_enabled?(message_type:, content_attributes:, private:, sender:, inbox:)
+    message_type == 'outgoing' &&
+      ActiveModel::Type::Boolean.new.cast(content_attributes.with_indifferent_access['whatsapp_agent_header_enabled']) &&
+      !private &&
+      sender.is_a?(User) &&
+      (inbox.whatsapp? || inbox.twilio_whatsapp?)
   end
 
   # rubocop:disable Metrics/ParameterLists
-  def whatsapp_agent_header_payload(content:, content_attributes:, message_type:, echo_id:, private:, sender:, inbox:)
+  def whatsapp_agent_header_payload(content:, content_attributes:, message_type:, private:, sender:, inbox:)
     enabled = whatsapp_ui_agent_header_enabled?(
       message_type: message_type,
-      echo_id: echo_id,
+      content_attributes: content_attributes,
       private: private,
       sender: sender,
       inbox: inbox

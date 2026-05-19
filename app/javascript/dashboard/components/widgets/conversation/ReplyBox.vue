@@ -228,6 +228,7 @@ export default {
     sender() {
       return {
         name: this.currentUser.name,
+        available_name: this.currentUser.available_name,
         thumbnail: this.currentUser.avatar_url,
       };
     },
