@@ -1,9 +1,11 @@
 // Constants
 export const DEFAULT_LANGUAGE = 'en';
 export const DEFAULT_CATEGORY = 'UTILITY';
+export const VARIABLE_PATTERN = /{{([^}]+)}}/g;
 export const COMPONENT_TYPES = {
   HEADER: 'HEADER',
   BODY: 'BODY',
+  FOOTER: 'FOOTER',
   BUTTONS: 'BUTTONS',
 };
 export const MEDIA_FORMATS = ['IMAGE', 'VIDEO', 'DOCUMENT'];
@@ -21,7 +23,7 @@ export const allKeysRequired = value => {
 };
 
 export const replaceTemplateVariables = (templateText, processedParams) => {
-  return templateText.replace(/{{([^}]+)}}/g, (match, variable) => {
+  return templateText.replace(VARIABLE_PATTERN, (match, variable) => {
     const variableKey = processVariable(variable);
     return processedParams.body?.[variableKey] || `{{${variable}}}`;
   });
@@ -38,7 +40,7 @@ export const buildTemplateParameters = (template, hasMediaHeaderValue) => {
   const templateString = bodyComponent.text;
 
   // Process body variables
-  const matchedVariables = templateString.match(/{{([^}]+)}}/g);
+  const matchedVariables = templateString.match(VARIABLE_PATTERN);
   if (matchedVariables) {
     allVariables.body = {};
     matchedVariables.forEach(variable => {
@@ -68,7 +70,7 @@ export const buildTemplateParameters = (template, hasMediaHeaderValue) => {
       buttonComponent.buttons.forEach((button, index) => {
         // Handle URL buttons with variables
         if (button.type === 'URL' && button.url && button.url.includes('{{')) {
-          const buttonVars = button.url.match(/{{([^}]+)}}/g) || [];
+          const buttonVars = button.url.match(VARIABLE_PATTERN) || [];
           if (buttonVars.length > 0) {
             if (!allVariables.buttons) allVariables.buttons = [];
             allVariables.buttons[index] = {

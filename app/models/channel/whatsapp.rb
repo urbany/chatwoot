@@ -64,11 +64,9 @@ class Channel::Whatsapp < ApplicationRecord
     # rubocop:enable Rails/SkipsModelValidations
   end
 
-  delegate :send_message, to: :provider_service
-  delegate :send_template, to: :provider_service
-  delegate :sync_templates, to: :provider_service
-  delegate :media_url, to: :provider_service
-  delegate :api_headers, to: :provider_service
+  delegate :send_message, :send_template, :sync_templates,
+           :create_template, :delete_template,
+           :media_url, :api_headers, to: :provider_service
 
   def setup_webhooks
     perform_webhook_setup
