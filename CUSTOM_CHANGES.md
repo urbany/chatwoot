@@ -1,6 +1,37 @@
 # Custom Changes
 
-## Version v4.14.0-whatsapp-templates-v1
+## Version 4.14.0-whatsapp-templates-v2
+
+Date: 2026-05-20
+
+Builds on `4.14.0-whatsapp-templates-v1` with a release engineering fix for the failed CE Docker build. This iteration restores valid JSON syntax in the inbox settings locale file and updates the custom Docker workflow trigger so patched release tags like `4.14.0-whatsapp-templates-v2` launch the build directly, while mirrored upstream tags such as `v4.14.0` remain untouched.
+
+### Files Modified
+
+- (MODIFIED) `.github/workflows/build-custom-docker.yml`
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json`
+
+### Frontend
+
+- Restores valid JSON syntax in `INBOX_MGMT.TABS` by adding the missing comma between `WHATSAPP_TEMPLATES` and `VOICE`.
+- Unblocks the Vite JSON loader during assets precompile.
+
+### Configuration
+
+- Changes the custom Docker workflow tag trigger from generic `v*` to `*-whatsapp-templates-v*`.
+- Ensures patched WhatsApp release tags trigger image builds while mirrored upstream Chatwoot tags do not start this custom workflow.
+
+### Database
+
+- No database changes.
+
+### Upgrade Notes
+
+- Use tag `4.14.0-whatsapp-templates-v2` for this fixed release.
+- The upstream base tag remains `v4.14.0`.
+
+## Version 4.14.0-whatsapp-templates-v1
 
 Date: 2026-05-19
 
@@ -61,7 +92,7 @@ Ports the full `v4.13.0-whatsapp-templates-v12` cumulative patch line onto Chatw
 ### Configuration
 
 - No new runtime environment variables or application configuration.
-- The fork keeps `.github/workflows/build-custom-docker.yml` so pushing the annotated `v4.14.0-whatsapp-templates-v1` tag builds and publishes the CE image in GHCR.
+- The fork keeps `.github/workflows/build-custom-docker.yml`; the patched release tag for this line is `4.14.0-whatsapp-templates-v1`, while the mirrored upstream base tag remains `v4.14.0`.
 
 ### Upgrade Notes
 

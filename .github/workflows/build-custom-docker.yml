@@ -6,7 +6,7 @@ on:
       - develop
       - master
     tags:
-      - 'v*'
+      - '*-whatsapp-templates-v*'
   workflow_dispatch:  # Allow manual triggers
 
 env:
