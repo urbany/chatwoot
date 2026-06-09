@@ -4,6 +4,7 @@ import { mapGetters } from 'vuex';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import AddCannedModal from 'dashboard/routes/dashboard/settings/canned/AddCanned.vue';
+import EmojiInput from 'shared/components/emoji/EmojiInput.vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import { conversationUrl, frontendURL } from '../../../helper/URLHelper';
@@ -18,6 +19,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 export default {
   components: {
     AddCannedModal,
+    EmojiInput,
     MenuItem,
     ContextMenu,
     NextButton,
@@ -55,6 +57,7 @@ export default {
   data() {
     return {
       isCannedResponseModalOpen: false,
+      showReactionPicker: false,
       showDeleteModal: false,
     };
   },
@@ -115,6 +118,7 @@ export default {
       this.$emit('open', e);
     },
     handleClose(e) {
+      this.showReactionPicker = false;
       this.$emit('close', e);
     },
     handleTranslate() {
@@ -132,6 +136,23 @@ export default {
     handleReplyTo() {
       this.$emit('replyTo', this.message);
       this.handleClose();
+    },
+    toggleReactionPicker() {
+      this.showReactionPicker = !this.showReactionPicker;
+    },
+    async handleReaction(emoji) {
+      try {
+        await this.$store.dispatch('reactToMessage', {
+          conversationId: this.conversationId,
+          messageId: this.messageId,
+          emoji,
+        });
+        useAlert(this.$t('CONVERSATION.SUCCESS_REACTION'));
+        this.handleClose();
+      } catch (error) {
+        const errorMessage = error?.response?.data?.error;
+        useAlert(errorMessage || this.$t('CONVERSATION.FAIL_REACTION'));
+      }
     },
     openDeleteModal() {
       this.handleClose();
@@ -196,7 +217,7 @@ export default {
       :y="contextMenuPosition.y"
       @close="handleClose"
     >
-      <div class="menu-container">
+      <div class="menu-container relative">
         <MenuItem
           v-if="enabledOptions['replyTo']"
           :option="{
@@ -224,6 +245,25 @@ export default {
           variant="icon"
           @click.stop="handleTranslate"
         />
+        <MenuItem
+          v-if="enabledOptions['react']"
+          :option="{
+            icon: 'heart-handshake',
+            label: $t('CONVERSATION.CONTEXT_MENU.REACT'),
+          }"
+          variant="icon"
+          @click.stop="toggleReactionPicker"
+        />
+        <div
+          v-if="showReactionPicker && enabledOptions['react']"
+          v-on-clickaway="() => (showReactionPicker = false)"
+          class="relative"
+        >
+          <EmojiInput
+            class="!top-auto !bottom-full mb-1.5 ltr:left-0 rtl:right-0"
+            :on-click="handleReaction"
+          />
+        </div>
         <hr />
         <MenuItem
           v-if="enabledOptions['copyLink']"

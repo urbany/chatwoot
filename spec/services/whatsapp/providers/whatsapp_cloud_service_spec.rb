@@ -292,6 +292,45 @@ describe Whatsapp::Providers::WhatsappCloudService do
     end
   end
 
+  describe '#send_reaction' do
+    it 'calls the message endpoint with the WhatsApp Cloud reaction payload' do
+      stub_request(:post, phone_messages_url)
+        .with(
+          body: {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: '16505551234',
+            type: 'reaction',
+            reaction: {
+              message_id: 'wamid.target.message',
+              emoji: '😀'
+            }
+          }.to_json
+        )
+        .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_reaction('16505551234', 'wamid.target.message', '😀')).to eq('message_id')
+    end
+
+    it 'raises a friendly error for invalid or expired targets' do
+      stub_request(:post, phone_messages_url)
+        .to_return(
+          status: 400,
+          body: {
+            error: {
+              code: 131009,
+              message: 'Target message is invalid'
+            }
+          }.to_json,
+          headers: response_headers
+        )
+
+      expect do
+        service.send_reaction('16505551234', 'wamid.target.message', '😀')
+      end.to raise_error(RuntimeError, 'This message can no longer receive reactions.')
+    end
+  end
+
   describe '#sync_templates' do
     context 'when called' do
       it 'updated the message templates' do

@@ -1,5 +1,64 @@
 # Custom Changes
 
+## Version v4.14.1-whatsapp-templates-v2
+
+Date: 2026-06-09
+
+Builds on `v4.14.1-whatsapp-templates-v1` by adding WhatsApp message reactions. The patch stores inbound webhook reactions on the referenced Chatwoot message without a schema migration, adds a Cloud-only outbound reaction API with the same 24-hour reply window guard used for WhatsApp replies, and renders grouped reaction chips in the message footer with an emoji picker in the message context menu.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/controllers/api/v1/accounts/conversations/messages_controller.rb`
+- (MODIFIED) `app/javascript/dashboard/api/inbox/message.js`
+- (MODIFIED) `app/javascript/dashboard/components-next/message/Message.vue`
+- (ADDED) `app/javascript/dashboard/components-next/message/MessageReactions.vue`
+- (MODIFIED) `app/javascript/dashboard/components-next/message/bubbles/Base.vue`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/en/conversation.json`
+- (MODIFIED) `app/javascript/dashboard/modules/conversations/components/MessageContextMenu.vue`
+- (MODIFIED) `app/javascript/dashboard/store/modules/conversations/actions.js`
+- (MODIFIED) `app/javascript/dashboard/store/modules/specs/conversations/actions.spec.js`
+- (MODIFIED) `app/models/channel/whatsapp.rb`
+- (MODIFIED) `app/models/message.rb`
+- (ADDED) `app/services/messages/reaction_update_service.rb`
+- (MODIFIED) `app/services/whatsapp/incoming_message_base_service.rb`
+- (MODIFIED) `app/services/whatsapp/incoming_message_service_helpers.rb`
+- (MODIFIED) `app/services/whatsapp/providers/base_service.rb`
+- (MODIFIED) `app/services/whatsapp/providers/whatsapp_cloud_service.rb`
+- (ADDED) `app/services/whatsapp/send_reaction_service.rb`
+- (MODIFIED) `config/routes.rb`
+- (MODIFIED) `spec/controllers/api/v1/accounts/conversations/messages_controller_spec.rb`
+- (MODIFIED) `spec/jobs/webhooks/whatsapp_events_job_spec.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp_cloud_service_spec.rb`
+
+### Backend
+
+- Persists reactions on `Message.content_attributes.reactions`, keyed by actor, so inbound and outbound reaction state updates reuse the existing message row and broadcast path.
+- Handles inbound WhatsApp webhook reactions by locating the referenced message and upserting or removing the contact reaction instead of creating a synthetic message row.
+- Adds a Cloud-only outbound `POST /messages/:id/reaction` API that validates message eligibility, enforces the existing 24-hour reply window, sends the Graph API reaction payload, and stores the business reaction on the target message.
+- Maps Meta reaction failures such as `131009` to a user-facing error for expired reaction windows.
+
+### Frontend
+
+- Adds a message footer reaction component that groups reactions by emoji and exposes actor names on hover.
+- Adds a `React` action to the message context menu for supported WhatsApp Cloud incoming messages and reuses the existing emoji picker UI.
+- Wires the dashboard message API and store to update the message in place after a successful reaction response.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- No WhatsApp Graph API version upgrade in this patch.
+- Outbound reactions are exposed only for WhatsApp Cloud API inboxes; inbound webhook reactions update the referenced message state without schema changes.
+
+### Upgrade Notes
+
+- This release is a straight feature iteration on top of `v4.14.1-whatsapp-templates-v1`.
+- The next monthly port source should be `refs/heads/v4.14.1-whatsapp-templates-cumulative-v2` once that helper branch is created from this release.
+
 ## Version v4.14.1-whatsapp-templates-v1
 
 Date: 2026-06-09

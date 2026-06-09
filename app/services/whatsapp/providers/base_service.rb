@@ -21,6 +21,10 @@ class Whatsapp::Providers::BaseService
     raise 'Overwrite this method in child class'
   end
 
+  def send_reaction(_phone_number, _message_id, _emoji)
+    raise 'Overwrite this method in child class'
+  end
+
   def sync_template
     raise 'Overwrite this method in child class'
   end

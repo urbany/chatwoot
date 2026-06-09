@@ -5,6 +5,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   TEMPLATE_REQUEST_TIMEOUT = 10
   TEMPLATE_RECOVERY_TIMEOUT = 3
   TEMPLATE_REQUEST_TIMEOUT_MESSAGE = 'WhatsApp API request timed out. Template state will sync shortly.'.freeze
+  REACTION_REQUEST_TIMEOUT = 10
+  REACTION_REQUEST_TIMEOUT_MESSAGE = 'WhatsApp API request timed out while sending a reaction. Please try again.'.freeze
+  INVALID_REACTION_TARGET_ERROR_CODE = 131009
+  INVALID_REACTION_TARGET_MESSAGE = 'This message can no longer receive reactions.'.freeze
   TEMPLATE_API_VERSION = 'v25.0'.freeze
 
   def send_message(phone_number, message)
@@ -37,6 +41,33 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     )
 
     process_response(response, message)
+  end
+
+  def send_reaction(phone_number, message_id, emoji)
+    request_body = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: phone_number,
+      type: 'reaction',
+      reaction: {
+        message_id: message_id,
+        emoji: emoji
+      }
+    }
+
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: request_body.to_json,
+      timeout: REACTION_REQUEST_TIMEOUT
+    )
+
+    parsed_response = response.parsed_response
+    return parsed_response['messages'].first['id'] if response.success? && parsed_response['error'].blank?
+
+    raise reaction_error_message(response)
+  rescue Net::OpenTimeout, Net::ReadTimeout
+    raise RuntimeError, REACTION_REQUEST_TIMEOUT_MESSAGE
   end
 
   def sync_templates
@@ -369,6 +400,12 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def error_message(response)
     # https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes/#sample-response
     response.parsed_response&.dig('error', 'message')
+  end
+
+  def reaction_error_message(response)
+    return INVALID_REACTION_TARGET_MESSAGE if response.parsed_response&.dig('error', 'code') == INVALID_REACTION_TARGET_ERROR_CODE
+
+    error_message(response).presence || 'Failed to send WhatsApp reaction'
   end
 
   def template_body_parameters(template_info)

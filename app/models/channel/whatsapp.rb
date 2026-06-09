@@ -99,7 +99,7 @@ class Channel::Whatsapp < ApplicationRecord
     # rubocop:enable Rails/SkipsModelValidations
   end
 
-  delegate :send_message, :send_template, :sync_templates,
+  delegate :send_message, :send_template, :send_reaction, :sync_templates,
            :create_template, :delete_template,
            :media_url, :api_headers, to: :provider_service
 
