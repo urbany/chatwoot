@@ -7,6 +7,8 @@ RSpec.describe Whatsapp::CsatTemplateService do
   end
   let(:inbox) { create(:inbox, channel: whatsapp_channel, account: account) }
   let(:service) { described_class.new(whatsapp_channel) }
+  let(:message_templates_url) { "#{service.send(:business_account_path)}/message_templates" }
+  let(:api_headers) { service.send(:api_headers) }
 
   let(:expected_template_name) { "customer_satisfaction_survey_#{whatsapp_channel.inbox.id}" }
   let(:template_config) do
@@ -154,14 +156,7 @@ RSpec.describe Whatsapp::CsatTemplateService do
   end
 
   describe '#create_template' do
-    let(:mock_response) do
-      # rubocop:disable RSpec/VerifiedDoubles
-      double('response', :success? => true, :body => '{}', '[]' => { 'id' => '123', 'name' => 'template_name' })
-      # rubocop:enable RSpec/VerifiedDoubles
-    end
-
     before do
-      allow(HTTParty).to receive(:post).and_return(mock_response)
       inbox.update!(csat_config: {})
     end
 
@@ -189,21 +184,20 @@ RSpec.describe Whatsapp::CsatTemplateService do
         ]
       }
 
-      expect(HTTParty).to receive(:post).with(
-        "https://graph.facebook.com/v14.0/#{whatsapp_channel.provider_config['business_account_id']}/message_templates",
-        headers: {
-          'Authorization' => "Bearer #{whatsapp_channel.provider_config['api_key']}",
-          'Content-Type' => 'application/json'
-        },
-        body: expected_body.to_json
-      )
+      template_request = stub_request(:post, message_templates_url)
+                         .with(headers: api_headers, body: expected_body.to_json)
+                         .to_return(status: 200, body: { id: 'template_123', name: expected_template_name }.to_json,
+                                    headers: { 'Content-Type' => 'application/json' })
 
       service.create_template(template_config)
+
+      expect(template_request).to have_been_made
     end
 
     it 'returns success response on successful creation' do
-      allow(mock_response).to receive(:[]).with('id').and_return('template_123')
-      allow(mock_response).to receive(:[]).with('name').and_return(expected_template_name)
+      stub_request(:post, message_templates_url)
+        .to_return(status: 200, body: { id: 'template_123', name: expected_template_name }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
 
       result = service.create_template(template_config)
 
@@ -224,7 +218,8 @@ RSpec.describe Whatsapp::CsatTemplateService do
       end
 
       before do
-        allow(HTTParty).to receive(:post).and_return(error_response)
+        stub_request(:post, message_templates_url)
+          .to_return(status: 400, body: error_response.body, headers: { 'Content-Type' => 'application/json' })
         allow(Rails.logger).to receive(:error)
       end
 
@@ -247,33 +242,23 @@ RSpec.describe Whatsapp::CsatTemplateService do
 
   describe '#delete_template' do
     it 'makes DELETE request to correct endpoint' do
-      # rubocop:disable RSpec/VerifiedDoubles
-      mock_response = double('response', success?: true, body: '{}')
-      # rubocop:enable RSpec/VerifiedDoubles
-
-      expect(HTTParty).to receive(:delete).with(
-        "https://graph.facebook.com/v14.0/#{whatsapp_channel.provider_config['business_account_id']}/message_templates?name=test_template",
-        headers: {
-          'Authorization' => "Bearer #{whatsapp_channel.provider_config['api_key']}",
-          'Content-Type' => 'application/json'
-        }
-      ).and_return(mock_response)
+      template_request = stub_request(:delete, message_templates_url)
+                         .with(headers: api_headers, query: { name: 'test_template' })
+                         .to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
 
       result = service.delete_template('test_template')
+      expect(template_request).to have_been_made
       expect(result).to eq({ success: true, response_body: '{}' })
     end
 
     it 'uses default template name when none provided' do
-      # rubocop:disable RSpec/VerifiedDoubles
-      mock_response = double('response', success?: true, body: '{}')
-      # rubocop:enable RSpec/VerifiedDoubles
-
-      expect(HTTParty).to receive(:delete).with(
-        "https://graph.facebook.com/v14.0/#{whatsapp_channel.provider_config['business_account_id']}/message_templates?name=#{expected_template_name}",
-        anything
-      ).and_return(mock_response)
+      template_request = stub_request(:delete, message_templates_url)
+                         .with(headers: api_headers, query: { name: expected_template_name })
+                         .to_return(status: 200, body: '{}', headers: { 'Content-Type' => 'application/json' })
 
       service.delete_template
+
+      expect(template_request).to have_been_made
     end
 
     it 'returns failure response when API call fails' do
@@ -289,38 +274,41 @@ RSpec.describe Whatsapp::CsatTemplateService do
 
   describe '#get_template_status' do
     it 'makes GET request to correct endpoint' do
-      # rubocop:disable RSpec/VerifiedDoubles
-      mock_response = double('response', success?: true, body: '{}')
-      # rubocop:enable RSpec/VerifiedDoubles
-      allow(mock_response).to receive(:[]).with('data').and_return([{
-                                                                     'id' => '123',
-                                                                     'name' => 'test_template',
-                                                                     'status' => 'APPROVED',
-                                                                     'language' => 'en'
-                                                                   }])
-
-      expect(HTTParty).to receive(:get).with(
-        "https://graph.facebook.com/v14.0/#{whatsapp_channel.provider_config['business_account_id']}/message_templates?name=test_template",
-        headers: {
-          'Authorization' => "Bearer #{whatsapp_channel.provider_config['api_key']}",
-          'Content-Type' => 'application/json'
-        }
-      ).and_return(mock_response)
+      template_request = stub_request(:get, message_templates_url)
+                         .with(headers: api_headers, query: { name: 'test_template' })
+                         .to_return(
+                           status: 200,
+                           body: {
+                             data: [{
+                               id: '123',
+                               name: 'test_template',
+                               status: 'APPROVED',
+                               language: 'en'
+                             }]
+                           }.to_json,
+                           headers: { 'Content-Type' => 'application/json' }
+                         )
 
       service.get_template_status('test_template')
+
+      expect(template_request).to have_been_made
     end
 
     it 'returns success response when template exists' do
-      # rubocop:disable RSpec/VerifiedDoubles
-      mock_response = double('response', success?: true, body: '{}')
-      # rubocop:enable RSpec/VerifiedDoubles
-      allow(mock_response).to receive(:[]).with('data').and_return([{
-                                                                     'id' => '123',
-                                                                     'name' => 'test_template',
-                                                                     'status' => 'APPROVED',
-                                                                     'language' => 'en'
-                                                                   }])
-      allow(HTTParty).to receive(:get).and_return(mock_response)
+      stub_request(:get, message_templates_url)
+        .with(headers: api_headers, query: { name: 'test_template' })
+        .to_return(
+          status: 200,
+          body: {
+            data: [{
+              id: '123',
+              name: 'test_template',
+              status: 'APPROVED',
+              language: 'en'
+            }]
+          }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
 
       result = service.get_template_status('test_template')
 
@@ -336,21 +324,18 @@ RSpec.describe Whatsapp::CsatTemplateService do
     end
 
     it 'returns failure response when template not found' do
-      # rubocop:disable RSpec/VerifiedDoubles
-      mock_response = double('response', success?: true, body: '{}')
-      # rubocop:enable RSpec/VerifiedDoubles
-      allow(mock_response).to receive(:[]).with('data').and_return([])
-      allow(HTTParty).to receive(:get).and_return(mock_response)
+      stub_request(:get, message_templates_url)
+        .with(headers: api_headers, query: { name: 'test_template' })
+        .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
 
       result = service.get_template_status('test_template')
       expect(result).to eq({ success: false, error: 'Template not found' })
     end
 
     it 'returns failure response when API call fails' do
-      # rubocop:disable RSpec/VerifiedDoubles
-      mock_response = double('response', success?: false, body: '{}')
-      # rubocop:enable RSpec/VerifiedDoubles
-      allow(HTTParty).to receive(:get).and_return(mock_response)
+      stub_request(:get, message_templates_url)
+        .with(headers: api_headers, query: { name: 'test_template' })
+        .to_return(status: 500, body: '{}', headers: { 'Content-Type' => 'application/json' })
 
       result = service.get_template_status('test_template')
       expect(result).to eq({ success: false, error: 'Template not found' })
