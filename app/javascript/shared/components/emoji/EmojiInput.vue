@@ -11,6 +11,10 @@ export default {
       type: Function,
       default: () => {},
     },
+    suggestedEmojis: {
+      type: Array,
+      default: () => [],
+    },
     showRemoveButton: {
       type: Boolean,
       default: false,
@@ -49,6 +53,16 @@ export default {
     hasEmptySearchResult() {
       return this.filterAllEmojisBySearch.every(
         category => category.emojis.length === 0
+      );
+    },
+    normalizedSuggestedEmojis() {
+      return [...new Set(this.suggestedEmojis.filter(Boolean))];
+    },
+    showSuggestedEmojis() {
+      return (
+        this.selectedKey === SEARCH_KEY &&
+        this.search === '' &&
+        this.normalizedSuggestedEmojis.length > 0
       );
     },
   },
@@ -107,6 +121,19 @@ export default {
           :label="$t('EMOJI.REMOVE')"
           @click="onClick('')"
         />
+      </div>
+      <div
+        v-if="showSuggestedEmojis"
+        class="flex flex-wrap items-center gap-1 px-2 pb-2"
+      >
+        <button
+          v-for="emoji in normalizedSuggestedEmojis"
+          :key="emoji"
+          class="emoji--item h-8 w-8 text-xl"
+          @click="onClick(emoji)"
+        >
+          {{ emoji }}
+        </button>
       </div>
       <div v-if="hasNoSearch" ref="emojiItem" class="emoji-item">
         <h5
