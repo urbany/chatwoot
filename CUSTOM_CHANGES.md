@@ -1,5 +1,39 @@
 # Custom Changes
 
+## Version v4.14.1-whatsapp-templates-v4
+
+Date: 2026-06-11
+
+Builds on `v4.14.1-whatsapp-templates-v3` with a follow-up fix for the WhatsApp reaction picker. The `React` action was visible again in `v3`, but opening the picker immediately shifted focus into the emoji search field, which caused the shared context menu wrapper to close before agents could choose a reaction.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/components/ui/ContextMenu.vue`
+
+### Frontend
+
+- Changes the shared context menu close behavior to only dismiss when focus leaves the menu subtree, instead of on every wrapper blur.
+- Keeps the reaction picker open while `EmojiInput` auto-focuses its internal search field, so the emoji list remains interactive after clicking `React`.
+- Limits the fix to the generic popover focus handling so existing message reaction rendering and backend behavior stay unchanged.
+
+### Backend
+
+- No backend changes.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- This release is a bugfix iteration on top of `v4.14.1-whatsapp-templates-v3`.
+- The next monthly port source should be `refs/heads/v4.14.1-whatsapp-templates-cumulative-v4` once that helper branch is created from this release.
+
 ## Version v4.14.1-whatsapp-templates-v3
 
 Date: 2026-06-11

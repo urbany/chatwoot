@@ -77,6 +77,11 @@ const handleClose = () => {
   emit('close');
 };
 
+const handleFocusOut = event => {
+  if (menuRef.value?.contains(event.relatedTarget)) return;
+  handleClose();
+};
+
 onUnmounted(() => {
   isLocked.value = false;
 });
@@ -89,7 +94,7 @@ onUnmounted(() => {
       class="fixed outline-none z-[9999] cursor-pointer"
       :style="position"
       tabindex="0"
-      @blur="handleClose"
+      @focusout="handleFocusOut"
     >
       <slot />
     </div>
