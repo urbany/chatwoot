@@ -517,6 +517,32 @@ describe('#deleteMessage', () => {
     expect(commit.mock.calls).toEqual([]);
   });
 
+  describe('#reactToMessage', () => {
+    it('commits the updated message if the reaction API succeeds', async () => {
+      axios.post.mockResolvedValue({
+        data: {
+          id: 1,
+          content_attributes: { reactions: { business: { emoji: '😀' } } },
+        },
+      });
+
+      await actions.reactToMessage(
+        { commit },
+        { conversationId: 1, messageId: 1, emoji: '😀' }
+      );
+
+      expect(commit.mock.calls).toEqual([
+        [
+          types.ADD_MESSAGE,
+          {
+            id: 1,
+            content_attributes: { reactions: { business: { emoji: '😀' } } },
+          },
+        ],
+      ]);
+    });
+  });
+
   describe('#deleteConversation', () => {
     it('send correct actions if API is success', async () => {
       axios.delete.mockResolvedValue({

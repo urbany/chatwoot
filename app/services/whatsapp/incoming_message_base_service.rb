@@ -25,8 +25,9 @@ class Whatsapp::IncomingMessageBaseService
   private
 
   def process_messages
-    # We don't support reactions & ephemeral message now, we need to skip processing the message
-    # if the webhook event is a reaction or an ephermal message or an unsupported message.
+    return process_reaction_message(messages_data.first) if reaction_message?(messages_data.first)
+
+    # We don't support ephemeral or unsupported messages now, so we skip processing them.
     return if unprocessable_message_type?(message_type)
 
     # Multiple webhook events can be received for the same message due to
@@ -86,6 +87,24 @@ class Whatsapp::IncomingMessageBaseService
     @message.content = I18n.t('conversations.messages.whatsapp.unsupported_message')
     @message.content_attributes = @message.content_attributes.merge(is_unsupported: true)
     @message.save!
+  end
+
+  def process_reaction_message(message)
+    reaction = message[:reaction] || message['reaction']
+    return if reaction.blank?
+
+    target_message = reaction_target_message(reaction)
+    return if target_message.blank?
+
+    Messages::ReactionUpdateService.new(
+      message: target_message,
+      actor_key: 'contact',
+      actor_type: 'contact',
+      actor_id: target_message.conversation.contact_id,
+      actor_name: reaction_actor_name(target_message),
+      emoji: reaction[:emoji] || reaction['emoji'],
+      metadata: reaction_metadata(message)
+    ).perform
   end
 
   def create_contact_messages(message)
