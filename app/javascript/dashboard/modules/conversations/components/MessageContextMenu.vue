@@ -16,6 +16,8 @@ import MenuItem from '../../../components/widgets/conversation/contextMenu/menuI
 import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
+const DEFAULT_REACTION_SUGGESTIONS = ['👍', '🧡', '✅', '🙏', '😉', '😢', '🎉'];
+
 export default {
   components: {
     AddCannedModal,
@@ -57,6 +59,7 @@ export default {
   data() {
     return {
       isCannedResponseModalOpen: false,
+      reactionSuggestions: DEFAULT_REACTION_SUGGESTIONS,
       showReactionPicker: false,
       showDeleteModal: false,
     };
@@ -262,6 +265,7 @@ export default {
           <EmojiInput
             class="!top-auto !bottom-full mb-1.5 ltr:left-0 rtl:right-0"
             :on-click="handleReaction"
+            :suggested-emojis="reactionSuggestions"
           />
         </div>
         <hr />

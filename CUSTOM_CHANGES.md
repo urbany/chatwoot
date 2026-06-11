@@ -1,5 +1,41 @@
 # Custom Changes
 
+## Version v4.14.1-whatsapp-templates-v5
+
+Date: 2026-06-11
+
+Builds on `v4.14.1-whatsapp-templates-v4` with a UI polish pass for WhatsApp reactions. This iteration replaces the browser-native reaction chip tooltip with the same dashboard tooltip pattern already used on message avatars, and adds a curated row of WhatsApp-style reaction suggestions at the top of the picker.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/components-next/message/MessageReactions.vue`
+- (MODIFIED) `app/javascript/dashboard/modules/conversations/components/MessageContextMenu.vue`
+- (MODIFIED) `app/javascript/shared/components/emoji/EmojiInput.vue`
+
+### Frontend
+
+- Moves reaction chip hover text onto the dashboard tooltip system so actor names render consistently with the rest of the conversation UI.
+- Adds a suggested reaction row to the picker for WhatsApp message reactions without changing other emoji picker call sites.
+- Sets the suggested WhatsApp reactions to `👍`, `🧡`, `✅`, `🙏`, `😉`, `😢`, and `🎉`.
+
+### Backend
+
+- No backend changes.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- This release is a UI polish iteration on top of `v4.14.1-whatsapp-templates-v4`.
+- The next monthly port source should be `refs/heads/v4.14.1-whatsapp-templates-cumulative-v5` once that helper branch is created from this release.
+
 ## Version v4.14.1-whatsapp-templates-v4
 
 Date: 2026-06-11

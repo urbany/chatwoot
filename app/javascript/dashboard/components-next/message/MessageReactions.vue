@@ -37,6 +37,16 @@ const reactionGroups = computed(() => {
     tooltip: group.names.join(', '),
   }));
 });
+
+const tooltipOptions = tooltip => {
+  if (!tooltip) return undefined;
+
+  return {
+    content: tooltip,
+    delay: { show: 500, hide: 0 },
+    hideOnClick: true,
+  };
+};
 </script>
 
 <template>
@@ -44,7 +54,7 @@ const reactionGroups = computed(() => {
     <div
       v-for="group in reactionGroups"
       :key="group.emoji"
-      :title="group.tooltip || undefined"
+      v-tooltip.top="tooltipOptions(group.tooltip)"
       class="inline-flex items-center gap-1 rounded-full bg-n-alpha-black2 px-2 py-1 text-n-slate-12"
     >
       <span>{{ group.emoji }}</span>
