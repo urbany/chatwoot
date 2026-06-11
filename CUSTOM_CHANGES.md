@@ -1,5 +1,39 @@
 # Custom Changes
 
+## Version v4.14.1-whatsapp-templates-v3
+
+Date: 2026-06-11
+
+Builds on `v4.14.1-whatsapp-templates-v2` with a UI fix for WhatsApp reactions. The reactions feature was present in `v2`, including footer rendering and backend support, but the message action trigger was still hidden so agents had no visible way to open the reaction picker from the conversation view.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/components-next/message/Message.vue`
+
+### Frontend
+
+- Restores the visible message action trigger by removing the forced hidden-button mode from the message context menu.
+- Adds the expected named hover group on the message row so the ellipsis button appears on hover and the `React` action becomes reachable.
+- Leaves the existing footer reaction display and reaction picker behavior unchanged apart from making the entry point visible again.
+
+### Backend
+
+- No backend changes.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- This release is a bugfix iteration on top of `v4.14.1-whatsapp-templates-v2`.
+- The next monthly port source should be `refs/heads/v4.14.1-whatsapp-templates-cumulative-v3` once that helper branch is created from this release.
+
 ## Version v4.14.1-whatsapp-templates-v2
 
 Date: 2026-06-09

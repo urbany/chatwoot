@@ -538,7 +538,7 @@ provideMessageContext({
   <div
     v-if="shouldRenderMessage"
     :id="`message${props.id}`"
-    class="flex w-full mb-2 message-bubble-container"
+    class="group/context-menu flex w-full mb-2 message-bubble-container"
     :data-message-id="props.id"
     :class="[
       flexOrientationClass,
@@ -597,7 +597,6 @@ provideMessageContext({
         :is-open="showContextMenu"
         :enabled-options="contextMenuEnabledOptions"
         :message="payloadForContextMenu"
-        hide-button
         @open="openContextMenu"
         @close="closeContextMenu"
         @reply-to="handleReplyTo"
