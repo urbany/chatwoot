@@ -72,6 +72,20 @@ const currentContact = computed(() =>
   store.getters['contacts/getContact'](props.chat.meta.sender.id)
 );
 
+const isGroupConversation = computed(() => props.chat.group === true);
+
+const groupMemberCount = computed(() => {
+  const groupContacts = props.chat.group_contacts || [];
+  return groupContacts.length + 1; // +1 for primary contact
+});
+
+const displayName = computed(() => {
+  if (isGroupConversation.value && props.chat.group_title) {
+    return props.chat.group_title;
+  }
+  return currentContact.value.name;
+});
+
 const isSnoozed = computed(
   () => currentChat.value.status === wootConstants.STATUS_TYPE.SNOOZED
 );
@@ -118,7 +132,16 @@ const copyConversationId = async () => {
         :back-url="backButtonUrl"
         class="ltr:mr-2 rtl:ml-2"
       />
+      <!-- Group icon for group conversations -->
+      <div
+        v-if="isGroupConversation"
+        class="flex items-center justify-center w-8 h-8 rounded-full bg-n-alpha-2 flex-shrink-0"
+      >
+        <span class="i-lucide-users text-sm text-n-slate-11" />
+      </div>
+      <!-- Regular avatar for 1:1 conversations -->
       <Avatar
+        v-else
         :name="currentContact.name"
         :src="currentContact.thumbnail"
         :size="32"
@@ -133,10 +156,10 @@ const copyConversationId = async () => {
           <span
             class="text-sm font-medium truncate leading-tight text-n-slate-12"
           >
-            {{ currentContact.name }}
+            {{ displayName }}
           </span>
           <fluent-icon
-            v-if="!isHMACVerified"
+            v-if="!isHMACVerified && !isGroupConversation"
             v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"
             size="14"
             class="text-n-amber-10 my-0 mx-0 min-w-[14px] flex-shrink-0"
@@ -147,6 +170,12 @@ const copyConversationId = async () => {
         <div
           class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
         >
+          <span v-if="isGroupConversation" class="text-n-slate-11">
+            {{ $tc('CONVERSATION.GROUP.MEMBER_COUNT', groupMemberCount) }}
+          </span>
+          <span v-if="isGroupConversation" class="text-n-slate-10">
+            {{ $t('CONVERSATION.GROUP.SEPARATOR') }}
+          </span>
           <button
             type="button"
             class="truncate text-label-small text-n-slate-11 hover:text-n-slate-12 !p-0 cucursor-pointer"

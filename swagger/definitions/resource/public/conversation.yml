@@ -26,3 +26,12 @@ properties:
     description: Messages in the conversation
   contact:
     $ref: '#/components/schemas/public_contact_record'
+  group:
+    type: boolean
+    description: Whether this is a group conversation
+  group_title:
+    type: string
+    description: Title/name of the group conversation
+  group_source_id:
+    type: string
+    description: External identifier for the group (e.g., from WhatsApp or Telegram)
