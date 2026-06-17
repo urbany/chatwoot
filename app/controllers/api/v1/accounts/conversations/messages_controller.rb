@@ -25,6 +25,14 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     end
   end
 
+  def reaction
+    actor = Current.user || @resource
+    @message = Whatsapp::SendReactionService.new(message: message, user: actor, emoji: permitted_params[:emoji]).perform
+    render :update
+  rescue StandardError => e
+    render_could_not_create_error(e.message)
+  end
+
   def retry
     return if message.blank?
 
@@ -65,7 +73,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def permitted_params
-    params.permit(:id, :target_language, :status, :external_error)
+    params.permit(:id, :target_language, :status, :external_error, :emoji)
   end
 
   def already_translated_content_available?

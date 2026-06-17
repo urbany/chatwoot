@@ -146,6 +146,7 @@ const showContextMenu = ref(false);
 const { t } = useI18n();
 const route = useRoute();
 const inboxGetter = useMapGetter('inboxes/getInbox');
+const currentChat = useMapGetter('getSelectedChat');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
 const { replaceInstallationName } = useBranding();
 
@@ -365,6 +366,11 @@ const payloadForContextMenu = computed(() => {
     content_attributes: props.contentAttributes,
     content: props.content,
     conversation_id: props.conversationId,
+    inbox_id: props.inboxId,
+    message_type: props.messageType,
+    private: props.private,
+    source_id: props.sourceId,
+    status: props.status,
   };
 });
 
@@ -373,9 +379,21 @@ const contextMenuEnabledOptions = computed(() => {
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
 
   const isOutgoing = props.messageType === MESSAGE_TYPES.OUTGOING;
+  const isIncoming = props.messageType === MESSAGE_TYPES.INCOMING;
   const isFailedOrProcessing =
     props.status === MESSAGE_STATUS.FAILED ||
     props.status === MESSAGE_STATUS.PROGRESS;
+  const isWhatsAppCloudMessage =
+    inbox.value?.channel_type === 'Channel::Whatsapp' &&
+    inbox.value?.provider === 'whatsapp_cloud';
+  const canReact =
+    isWhatsAppCloudMessage &&
+    !!currentChat.value?.can_reply &&
+    isIncoming &&
+    !!props.sourceId &&
+    !props.private &&
+    !isMessageDeleted.value &&
+    !isFailedOrProcessing;
 
   return {
     copy: hasText,
@@ -390,6 +408,7 @@ const contextMenuEnabledOptions = computed(() => {
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
       !isFailedOrProcessing,
+    react: canReact,
   };
 });
 
@@ -522,7 +541,7 @@ provideMessageContext({
   <div
     v-if="shouldRenderMessage"
     :id="`message${props.id}`"
-    class="flex w-full mb-2 message-bubble-container"
+    class="group/context-menu flex w-full mb-2 message-bubble-container"
     :data-message-id="props.id"
     :class="[
       flexOrientationClass,
@@ -581,7 +600,6 @@ provideMessageContext({
         :is-open="showContextMenu"
         :enabled-options="contextMenuEnabledOptions"
         :message="payloadForContextMenu"
-        hide-button
         @open="openContextMenu"
         @close="closeContextMenu"
         @reply-to="handleReplyTo"

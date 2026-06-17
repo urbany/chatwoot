@@ -10,9 +10,12 @@ module Api::V1::Accounts::Concerns::WhatsappHealthManagement
   def sync_templates
     return render status: :unprocessable_entity, json: { error: 'Template sync is only available for WhatsApp channels' } unless whatsapp_channel?
 
+    log_template_info('Manual sync requested', action: 'manual_sync')
     trigger_template_sync
+    log_template_info('Manual sync enqueued', action: 'manual_sync')
     render status: :ok, json: { message: 'Template sync initiated successfully' }
   rescue StandardError => e
+    log_template_error('Manual sync failed', action: 'manual_sync', error: e.message)
     render status: :internal_server_error, json: { error: e.message }
   end
 
@@ -51,5 +54,22 @@ module Api::V1::Accounts::Concerns::WhatsappHealthManagement
     elsif @inbox.twilio? && @inbox.channel.whatsapp?
       Channels::Twilio::TemplatesSyncJob.perform_later(@inbox.channel)
     end
+  end
+
+  def template_log_context(extra = {})
+    {
+      account_id: Current.account.id,
+      inbox_id: @inbox.id,
+      channel_id: @inbox.channel.id,
+      provider: @inbox.channel.provider
+    }.merge(extra).compact
+  end
+
+  def log_template_info(message, extra = {})
+    Rails.logger.info("[WHATSAPP TEMPLATES] #{message} #{template_log_context(extra).to_json}")
+  end
+
+  def log_template_error(message, extra = {})
+    Rails.logger.error("[WHATSAPP TEMPLATES] #{message} #{template_log_context(extra).to_json}")
   end
 end
