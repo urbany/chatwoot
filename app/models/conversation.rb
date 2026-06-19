@@ -116,6 +116,8 @@ class Conversation < ApplicationRecord
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
   has_many :attachments, through: :messages
   has_many :reporting_events, dependent: :destroy_async
+  has_many :kanban_items, foreign_key: :conversation_display_id, primary_key: :display_id,
+                          dependent: :nullify, inverse_of: :conversation
 
   before_save :ensure_snooze_until_reset
   before_create :determine_conversation_status

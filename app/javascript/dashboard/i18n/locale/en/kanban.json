@@ -1,0 +1,51 @@
+{
+  "KANBAN": {
+    "HEADER": "Kanban",
+    "SELECT_FUNNEL": "Select funnel",
+    "NEW_ITEM": "New item",
+    "NEW_FUNNEL": "New funnel",
+    "EDIT_ITEM": "Edit item",
+    "EDIT_FUNNEL": "Edit funnel",
+    "DELETE_ITEM": "Delete item",
+    "DELETE_FUNNEL": "Delete funnel",
+    "DELETE_ITEM_CONFIRM": "Are you sure you want to delete this item?",
+    "DELETE_FUNNEL_CONFIRM": "Are you sure you want to delete this funnel? All items will be removed.",
+    "NO_FUNNELS": "No funnels yet",
+    "NO_ITEMS": "No items in this stage",
+    "MOVE_ERROR": "Could not move item. Please try again.",
+    "CREATE_ITEM_SUCCESS": "Item created successfully",
+    "CREATE_ITEM_ERROR": "Could not create item",
+    "UPDATE_ITEM_SUCCESS": "Item updated successfully",
+    "UPDATE_ITEM_ERROR": "Could not update item",
+    "DELETE_ITEM_SUCCESS": "Item deleted successfully",
+    "DELETE_ITEM_ERROR": "Could not delete item",
+    "CREATE_FUNNEL_SUCCESS": "Funnel created successfully",
+    "CREATE_FUNNEL_ERROR": "Could not create funnel",
+    "UPDATE_FUNNEL_SUCCESS": "Funnel updated successfully",
+    "UPDATE_FUNNEL_ERROR": "Could not update funnel",
+    "DELETE_FUNNEL_SUCCESS": "Funnel deleted successfully",
+    "DELETE_FUNNEL_ERROR": "Could not delete funnel",
+    "FORM": {
+      "TITLE": "Title",
+      "DESCRIPTION": "Description",
+      "VALUE": "Value",
+      "PRIORITY": "Priority",
+      "PRIORITY_LOW": "Low",
+      "PRIORITY_MEDIUM": "Medium",
+      "PRIORITY_HIGH": "High",
+      "STAGE": "Stage",
+      "ASSIGNED_AGENTS": "Assigned agents",
+      "CONVERSATION": "Conversation",
+      "SAVE": "Save",
+      "CREATE": "Create"
+    },
+    "FUNNEL_FORM": {
+      "NAME": "Funnel name",
+      "DESCRIPTION": "Description",
+      "STAGES": "Stages",
+      "STAGE_NAME": "Stage name",
+      "STAGE_COLOR": "Color",
+      "ADD_STAGE": "Add stage"
+    }
+  }
+}

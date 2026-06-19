@@ -1,0 +1,9 @@
+json.id resource.id
+json.funnel_id resource.funnel_id
+json.funnel_stage resource.funnel_stage
+json.position resource.position
+json.item_details resource.item_details
+json.conversation_display_id resource.conversation_display_id
+json.account_id resource.account_id
+json.created_at resource.created_at
+json.updated_at resource.updated_at

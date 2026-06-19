@@ -44,6 +44,7 @@ export const FEATURE_FLAGS = {
   CAPTAIN_DOCUMENT_AUTO_SYNC: 'captain_document_auto_sync',
   SAML: 'saml',
   COMPANIES: 'companies',
+  KANBAN: 'kanban',
   ADVANCED_SEARCH: 'advanced_search',
   CONVERSATION_REQUIRED_ATTRIBUTES: 'conversation_required_attributes',
   CONVERSATION_UNREAD_COUNTS: 'conversation_unread_counts',

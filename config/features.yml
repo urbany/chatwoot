@@ -241,3 +241,6 @@
   display_name: Advanced Assignment
   enabled: false
   premium: true
+- name: kanban
+  display_name: Kanban
+  enabled: false

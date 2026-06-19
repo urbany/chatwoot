@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
+ActiveRecord::Schema[7.1].define(version: 2026_06_19_124632) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -854,6 +854,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "funnels", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.jsonb "stages", default: [], null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_funnels_on_account_id_and_name", unique: true
+    t.index ["account_id"], name: "index_funnels_on_account_id"
+  end
+
   create_table "inbox_assignment_policies", force: :cascade do |t|
     t.bigint "inbox_id", null: false
     t.bigint "assignment_policy_id", null: false
@@ -932,6 +944,21 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "settings", default: {}
+  end
+
+  create_table "kanban_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "funnel_id", null: false
+    t.string "funnel_stage", null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "item_details", default: {}, null: false
+    t.bigint "conversation_display_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "conversation_display_id"], name: "index_kanban_items_on_account_id_and_conversation_display_id"
+    t.index ["account_id", "funnel_id", "funnel_stage"], name: "index_kanban_items_on_account_id_and_funnel_id_and_funnel_stage"
+    t.index ["account_id"], name: "index_kanban_items_on_account_id"
+    t.index ["funnel_id"], name: "index_kanban_items_on_funnel_id"
   end
 
   create_table "labels", force: :cascade do |t|
@@ -1345,7 +1372,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "funnels", "accounts"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "kanban_items", "accounts"
+  add_foreign_key "kanban_items", "funnels"
   add_foreign_key "user_sessions", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").

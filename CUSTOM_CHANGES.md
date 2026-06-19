@@ -1,5 +1,98 @@
 # Custom Changes
 
+## Version feat/kanban-mvp
+
+Date: 2026-06-19
+
+Adds a lightweight, account-level Kanban board feature (Funnels and Kanban Items). The feature is gated behind the `kanban` account feature flag and is disabled by default. It is implemented as a clean-room addition with no dependency on external services or Stacklab code, keeping the surface area small for future upstream rebases.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/components-next/sidebar/Sidebar.vue`
+- (MODIFIED) `app/javascript/dashboard/featureFlags.js`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/en/index.js`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/en/settings.json`
+- (MODIFIED) `app/javascript/dashboard/routes/dashboard/dashboard.routes.js`
+- (MODIFIED) `app/javascript/dashboard/store/index.js`
+- (MODIFIED) `app/javascript/dashboard/store/mutation-types.js`
+- (MODIFIED) `app/models/account.rb`
+- (MODIFIED) `app/models/conversation.rb`
+- (MODIFIED) `config/features.yml`
+- (MODIFIED) `config/routes.rb`
+- (MODIFIED) `db/schema.rb`
+- (ADDED) `app/controllers/api/v1/accounts/funnels_controller.rb`
+- (ADDED) `app/controllers/api/v1/accounts/kanban_items_controller.rb`
+- (ADDED) `app/javascript/dashboard/i18n/locale/en/kanban.json`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/KanbanView.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/api/funnels.js`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/api/kanbanItems.js`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/components/FunnelModal.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/components/KanbanBoard.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/components/KanbanCard.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/components/KanbanColumn.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/components/KanbanItemModal.vue`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/routes.js`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/stores/funnelStore.js`
+- (ADDED) `app/javascript/dashboard/routes/dashboard/kanban/stores/kanbanStore.js`
+- (ADDED) `app/models/funnel.rb`
+- (ADDED) `app/models/kanban_item.rb`
+- (ADDED) `app/policies/funnel_policy.rb`
+- (ADDED) `app/policies/kanban_item_policy.rb`
+- (ADDED) `app/views/api/v1/accounts/funnels/index.json.jbuilder`
+- (ADDED) `app/views/api/v1/accounts/funnels/show.json.jbuilder`
+- (ADDED) `app/views/api/v1/accounts/kanban_items/index.json.jbuilder`
+- (ADDED) `app/views/api/v1/accounts/kanban_items/show.json.jbuilder`
+- (ADDED) `app/views/api/v1/models/_funnel.json.jbuilder`
+- (ADDED) `app/views/api/v1/models/_kanban_item.json.jbuilder`
+- (ADDED) `db/migrate/20260619124631_create_funnels.rb`
+- (ADDED) `db/migrate/20260619124632_create_kanban_items.rb`
+- (ADDED) `spec/controllers/api/v1/accounts/funnels_controller_spec.rb`
+- (ADDED) `spec/controllers/api/v1/accounts/kanban_items_controller_spec.rb`
+- (ADDED) `spec/factories/funnels.rb`
+- (ADDED) `spec/factories/kanban_items.rb`
+- (ADDED) `spec/models/funnel_spec.rb`
+- (ADDED) `spec/models/kanban_item_spec.rb`
+
+### Frontend
+
+- Adds a new `/accounts/:accountId/kanban` dashboard route guarded by the `kanban` feature flag.
+- Adds a "Kanban" sidebar entry with a Lucide kanban icon.
+- Adds `KanbanView`, `KanbanBoard`, `KanbanColumn`, `KanbanCard`, `KanbanItemModal`, and `FunnelModal` components using Tailwind-only styling and native HTML5 drag-and-drop.
+- Adds `kanbanFunnels` and `kanbanItems` Vuex stores with UI flags, plus `FunnelsAPI` and `KanbanItemsAPI` clients.
+- Adds `KANBAN` feature flag constant and English i18n entries under `KANBAN.*` and `SIDEBAR.KANBAN`.
+
+### Backend
+
+- Adds `Funnel` and `KanbanItem` models with account scoping, validation, and JSONB `stages`/`item_details` storage.
+- Adds `Api::V1::Accounts::FunnelsController` (index, show, create, update, destroy) and `Api::V1::Accounts::KanbanItemsController` (index nested under funnels, show, create, update, destroy, plus `move` and `reorder` members).
+- Adds `FunnelPolicy` and `KanbanItemPolicy`: agents can view and move/reorder/create items; only administrators can create/update/destroy funnels and delete items.
+- Adds Jbuilder partials under `app/views/api/v1/models/` for reuse.
+
+### Database
+
+- Adds `funnels` table with `account_id`, `name`, `description`, `stages` (JSONB), and `active` flags.
+- Adds `kanban_items` table with `account_id`, `funnel_id`, `funnel_stage`, `position`, `item_details` (JSONB), and optional `conversation_display_id`.
+- Adds composite indexes on `kanban_items` for `(account_id, funnel_id, funnel_stage)` and `(account_id, conversation_display_id)`.
+
+### Configuration
+
+- Adds the `kanban` account feature flag to `config/features.yml`, disabled by default.
+- No new environment variables or application configuration.
+
+### Tests
+
+- Adds model specs for `Funnel` and `KanbanItem` validations and scopes.
+- Adds request specs for the funnels and kanban_items controllers covering authentication, authorization, CRUD, move, and reorder.
+- All new specs pass; RuboCop passes on new Ruby files; ESLint passes on new frontend files.
+
+### Upgrade Notes
+
+- Branch `feat/kanban-mvp` is based on `v4.15.1-whatsapp-templates-v1`.
+- Run `bundle exec rails db:migrate` to apply the new migrations.
+- Enable the feature per account by flipping the `kanban` feature flag.
+- The implementation deliberately avoids new runtime dependencies, external services, and Stacklab-licensed code to keep upstream rebases straightforward.
+
 ## Version v4.15.1-whatsapp-templates-v1
 
 Date: 2026-06-17
