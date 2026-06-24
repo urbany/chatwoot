@@ -1,5 +1,41 @@
 # Custom Changes
 
+## Version v4.15.1-whatsapp-templates-v2
+
+Date: 2026-06-24
+
+Builds on `v4.15.1-whatsapp-templates-v1` with two fixes: makes the CSAT comment optional in the survey and widget forms, and fixes WhatsApp help article insertion to include both the article title (bold) and URL instead of just the title.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `app/javascript/dashboard/constants/editor.js`
+- (MODIFIED) `app/javascript/shared/components/CustomerSatisfaction.vue`
+- (MODIFIED) `app/javascript/survey/components/Feedback.vue`
+- (MODIFIED) `app/services/messages/markdown_renderers/whats_app_renderer.rb`
+
+### Frontend
+
+- Removes required validation on the CSAT comment textarea in both the standalone survey page (`Feedback.vue`) and the widget (`CustomerSatisfaction.vue`). The submit button no longer requires a non-empty comment — only a rating is needed, matching the "Your feedback (optional)" placeholder text.
+- Adds `link` to the WhatsApp channel's supported editor marks so `stripUnsupportedFormatting` no longer strips `[title](url)` markdown links when inserting help articles into a WhatsApp conversation.
+
+### Backend
+
+- Updates `WhatsAppRenderer#link` to output the link text wrapped in WhatsApp bold (`*text*`) followed by the URL, instead of just the URL. This ensures the help article title is preserved alongside the link in messages delivered to WhatsApp.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- This release is a bugfix iteration on top of `v4.15.1-whatsapp-templates-v1`.
+- The next monthly port source should be `refs/heads/v4.15.1-whatsapp-templates-cumulative-v2`.
+
 ## Version v4.15.1-whatsapp-templates-v1
 
 Date: 2026-06-17
