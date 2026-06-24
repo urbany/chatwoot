@@ -1,7 +1,9 @@
+# rubocop:disable Metrics/ClassLength
 class Messages::MessageBuilder
   include ::FileTypeHelper
   include ::EmailHelper
   include ::DataHelper
+  include WhatsappAgentHeaderHelper
 
   attr_reader :message
 
@@ -34,10 +36,6 @@ class Messages::MessageBuilder
 
   private
 
-  # Extracts content attributes from the given params.
-  # - Converts ActionController::Parameters to a regular hash if needed.
-  # - Attempts to parse a JSON string if content is a string.
-  # - Returns an empty hash if content is not present, if there's a parsing error, or if it's an unexpected type.
   def content_attributes
     params = convert_to_hash(@params)
     content_attributes = params.fetch(:content_attributes, {})
@@ -139,22 +137,43 @@ class Messages::MessageBuilder
     AgentBot.where(account_id: [nil, @conversation.account.id]).find_by(id: @params[:sender_id])
   end
 
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
   def message_params
+    message_type_value = message_type
+    message_sender = sender
+    sanitized_content_attributes = content_attributes.except(:whatsapp_agent_header_enabled, 'whatsapp_agent_header_enabled')
+    whatsapp_header_payload = if @params[:template_params].present?
+                                {
+                                  content: @params[:content],
+                                  content_attributes: sanitized_content_attributes
+                                }
+                              else
+                                whatsapp_agent_header_payload(
+                                  content: @params[:content],
+                                  content_attributes: content_attributes,
+                                  message_type: message_type_value,
+                                  private: @private,
+                                  sender: message_sender,
+                                  inbox: @conversation.inbox
+                                )
+                              end
+
     {
       account_id: @conversation.account_id,
       inbox_id: @conversation.inbox_id,
-      message_type: message_type,
-      content: @params[:content],
+      message_type: message_type_value,
+      content: whatsapp_header_payload[:content],
       private: @private,
-      sender: sender,
+      sender: message_sender,
       content_type: @params[:content_type],
-      content_attributes: content_attributes.presence,
+      content_attributes: whatsapp_header_payload[:content_attributes].presence,
       items: @items,
       in_reply_to: @in_reply_to,
       echo_id: @params[:echo_id],
       source_id: @params[:source_id]
     }.merge(external_created_at).merge(automation_rule_id).merge(campaign_id).merge(template_params)
   end
+  # rubocop:enable Metrics/MethodLength, Metrics/AbcSize
 
   def email_inbox?
     @conversation.inbox&.inbox_type == 'Email'
@@ -233,5 +252,6 @@ class Messages::MessageBuilder
                                        })
   end
 end
+# rubocop:enable Metrics/ClassLength
 
 Messages::MessageBuilder.prepend_mod_with('Messages::MessageBuilder')

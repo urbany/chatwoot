@@ -32,9 +32,7 @@ export default {
   },
   computed: {
     isSubmitDisabled() {
-      return (
-        this.isButtonDisabled || !this.selectedRating || !this.feedback.trim()
-      );
+      return this.isButtonDisabled || !this.selectedRating;
     },
   },
   methods: {
