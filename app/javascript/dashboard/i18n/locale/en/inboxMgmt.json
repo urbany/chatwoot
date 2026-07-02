@@ -936,6 +936,12 @@
       "DISPLAY_TYPE": {
         "LABEL": "Display type"
       },
+      "STYLE": {
+        "LABEL": "Survey style",
+        "DEFAULT": "Default (link to rating page)",
+        "INLINE": "Inline (reply with 1-5)",
+        "HELP": "In inline mode, customers rate by replying directly in the chat with a number 1-5 — no external page needed."
+      },
       "COOLDOWN": {
         "LABEL": "Cooldown period",
         "HELP": "Don't send CSAT survey if one was already sent within this number of days",

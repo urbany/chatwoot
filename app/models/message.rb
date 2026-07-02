@@ -332,6 +332,11 @@ class Message < ApplicationRecord
     send_reply
     execute_message_template_hooks
     update_contact_activity
+    process_csat_rating
+  end
+
+  def process_csat_rating
+    CsatSurveys::InlineProcessor.new(message: self).perform
   end
 
   def update_contact_activity

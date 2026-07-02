@@ -1,3 +1,4 @@
+# rubocop:disable Metrics/ClassLength
 class CsatSurveyService
   pattr_initialize [:conversation!]
 
@@ -9,6 +10,34 @@ class CsatSurveyService
       return
     end
 
+    if inline_style?
+      send_inline_survey
+    else
+      send_default_survey
+    end
+  end
+
+  private
+
+  delegate :inbox, :contact, to: :conversation
+
+  def inline_style?
+    csat_config['style'] == 'inline'
+  end
+
+  def send_inline_survey
+    if within_messaging_window?
+      ::MessageTemplates::Template::CsatSurvey.new(conversation: conversation).perform
+    elsif whatsapp_channel? && template_available_and_approved?
+      send_whatsapp_template_survey
+    elsif inbox.twilio_whatsapp? && twilio_template_available_and_approved?
+      send_twilio_whatsapp_template_survey
+    else
+      create_csat_not_sent_activity_message
+    end
+  end
+
+  def send_default_survey
     if whatsapp_channel? && template_available_and_approved?
       send_whatsapp_template_survey
     elsif inbox.twilio_whatsapp? && twilio_template_available_and_approved?
@@ -19,10 +48,6 @@ class CsatSurveyService
       create_csat_not_sent_activity_message
     end
   end
-
-  private
-
-  delegate :inbox, :contact, to: :conversation
 
   def should_send_csat_survey?
     conversation_allows_csat? && csat_enabled? && !csat_already_sent? && csat_allowed_by_survey_rules?
@@ -217,3 +242,4 @@ class CsatSurveyService
     ::Conversations::ActivityMessageJob.perform_later(conversation, activity_message_params) if content
   end
 end
+# rubocop:enable Metrics/ClassLength
