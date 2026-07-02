@@ -789,3 +789,52 @@ Adds a unified WhatsApp Templates Management feature for WhatsApp inboxes. The e
 
 - Revert the files listed above.
 - No database rollback is required.
+
+---
+
+## Version v4.15.1-whatsapp-templates-v4
+
+Date: 2026-07-02
+
+Builds on `v4.15.1-whatsapp-templates-v2` with a new inline CSAT survey style. Adds the `style` field to `csat_config` so inboxes can choose between the default link-to-page survey and an inline mode where customers rate by replying directly in the chat with a number 1-5. A new `CsatSurveys::InlineProcessor` catches any `1`-`5` incoming message and creates the CSAT response — works for all channels (WhatsApp, API, SMS, Email, etc.) without touching WhatsApp providers.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (ADDED) `app/services/csat_surveys/inline_processor.rb`
+- (MODIFIED) `app/models/message.rb`
+- (MODIFIED) `app/services/csat_survey_service.rb`
+- (MODIFIED) `app/services/message_templates/template/csat_survey.rb`
+- (MODIFIED) `app/presenters/message_content_presenter.rb`
+- (MODIFIED) `app/controllers/api/v1/accounts/inboxes_controller.rb`
+- (MODIFIED) `app/javascript/dashboard/routes/dashboard/settings/inbox/settingsPage/CustomerSatisfactionPage.vue`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/en/inboxMgmt.json`
+- (MODIFIED) `app/javascript/dashboard/i18n/locale/pt_BR/inboxMgmt.json`
+
+### Frontend
+
+- Adds a radio selector for CSAT survey style ("Default" vs "Inline") in the inbox settings page.
+- Inline mode label reads "Inline (reply with 1-5)" with help text explaining that customers rate directly in the chat.
+- Includes pt-BR translations for the new style selector.
+
+### Backend
+
+- `CsatSurveys::InlineProcessor` — detects incoming messages with content `1`-`5`, finds the pending `input_csat` message in the conversation, and creates `CsatSurveyResponse`.
+- `CsatSurveyService#perform` — branches on `csat_config['style']`; inline style sends CSAT messages without the survey URL, default style keeps existing behavior.
+- `MessageContentPresenter#should_append_survey_link?` — returns `false` for inline style so no URL is appended.
+- `InboxesController` — permits `style` param in `csat_config`, extracted survey rules formatting.
+
+### Database
+
+- No database changes. The `style` field is stored in the existing `csat_config` JSONB column on inboxes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- Existing inboxes continue with `default` style — no change in behavior.
+- To enable inline mode, set CSAT survey style to "Inline (reply with 1-5)" in Settings → Inbox → CSAT.
+- Even outside the 24h WhatsApp window, customers can reply to template messages with a number 1-5 and the InlineProcessor captures it.
+- The next monthly port source should be `refs/heads/v4.15.1-whatsapp-templates-cumulative-v4`.
