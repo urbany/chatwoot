@@ -62,6 +62,38 @@ describe('#createPendingMessage', () => {
     });
   });
 
+  it('adds the WhatsApp agent header to manual pending messages only in content', () => {
+    const pending = createPendingMessage({
+      message: 'hi',
+      contentAttributes: { whatsapp_agent_header_enabled: true },
+      sender: { name: 'Internal Name', available_name: 'Public Name' },
+    });
+
+    expect(pending.content).toBe('**Public Name:**\nhi');
+    expect(pending.message).toBe('hi');
+  });
+
+  it('falls back to the sender name when the public name is blank', () => {
+    const pending = createPendingMessage({
+      message: 'hi',
+      contentAttributes: { whatsapp_agent_header_enabled: true },
+      sender: { name: 'Internal Name', available_name: '' },
+    });
+
+    expect(pending.content).toBe('**Internal Name:**\nhi');
+  });
+
+  it('does not add the WhatsApp agent header to template pending messages', () => {
+    const pending = createPendingMessage({
+      message: 'hi',
+      contentAttributes: { whatsapp_agent_header_enabled: true },
+      sender: { name: 'Internal Name', available_name: 'Public Name' },
+      templateParams: { name: 'sample_template' },
+    });
+
+    expect(pending.content).toBe('hi');
+  });
+
   it('returns the pending message with attachment key if file is passed', () => {
     const messageWithFile = {
       message: 'hi',
