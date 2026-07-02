@@ -4,6 +4,11 @@ class CsatSurveyService
   def perform
     return unless should_send_csat_survey?
 
+    if csat_cooldown_blocked?
+      create_csat_cooldown_activity_message
+      return
+    end
+
     if whatsapp_channel? && template_available_and_approved?
       send_whatsapp_template_survey
     elsif inbox.twilio_whatsapp? && twilio_template_available_and_approved?
@@ -53,6 +58,39 @@ class CsatSurveyService
     else
       true
     end
+  end
+
+  def csat_cooldown_blocked?
+    cooldown_days = csat_config['cooldown']&.to_i
+    return false if cooldown_days.blank? || cooldown_days <= 0
+
+    @last_response = contact.csat_survey_responses
+                            .where(account_id: conversation.account_id)
+                            .order(created_at: :desc)
+                            .first
+
+    return false if @last_response.blank?
+
+    @cooldown_days = cooldown_days
+    @last_response.created_at >= cooldown_days.days.ago
+  end
+
+  def create_csat_cooldown_activity_message
+    time_ago = helpers.time_ago_in_words(@last_response.created_at)
+    content = I18n.t('conversations.activity.csat.not_sent_due_to_cooldown',
+                     cooldown_days: @cooldown_days,
+                     time_ago: time_ago)
+    activity_message_params = {
+      account_id: conversation.account_id,
+      inbox_id: conversation.inbox_id,
+      message_type: :activity,
+      content: content
+    }
+    ::Conversations::ActivityMessageJob.perform_later(conversation, activity_message_params) if content
+  end
+
+  def helpers
+    ActionController::Base.helpers
   end
 
   def survey_rules_configured?

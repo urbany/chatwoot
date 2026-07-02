@@ -936,6 +936,11 @@
       "DISPLAY_TYPE": {
         "LABEL": "Display type"
       },
+      "COOLDOWN": {
+        "LABEL": "Cooldown period",
+        "HELP": "Don't send CSAT survey if one was already sent within this number of days",
+        "PLACEHOLDER": "Days (e.g., 7)"
+      },
       "MESSAGE": {
         "LABEL": "Message",
         "PLACEHOLDER": "Please enter a message to show users with the form"

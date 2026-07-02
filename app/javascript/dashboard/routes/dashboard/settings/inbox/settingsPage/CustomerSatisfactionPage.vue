@@ -51,6 +51,7 @@ const state = reactive({
   templateButtonText: 'Please rate us',
   surveyRuleOperator: 'contains',
   templateLanguage: 'en',
+  cooldown: 0,
 });
 
 const templateStatus = ref(null);
@@ -162,6 +163,7 @@ const initializeState = () => {
   state.templateButtonText = buttonText;
   state.templateLanguage = language;
   state.surveyRuleOperator = surveyRules.operator || 'contains';
+  state.cooldown = csat_config.cooldown || 0;
 
   selectedLabelValues.value = Array.isArray(surveyRules.values)
     ? [...surveyRules.values]
@@ -426,6 +428,7 @@ const performSave = async () => {
     const csatConfig = {
       display_type: state.displayType,
       message: state.message,
+      cooldown: state.cooldown,
       button_text: state.templateButtonText,
       language: state.templateLanguage,
       survey_rules: {
@@ -674,6 +677,23 @@ const handleConfirmTemplateUpdate = async () => {
               />
             </WithLabel>
           </template>
+
+          <!-- Cooldown period -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-n-slate-12">
+              {{ $t('INBOX_MGMT.CSAT.COOLDOWN.LABEL') }}
+            </label>
+            <Input
+              v-model.number="state.cooldown"
+              type="number"
+              min="0"
+              :placeholder="$t('INBOX_MGMT.CSAT.COOLDOWN.PLACEHOLDER')"
+              class="w-full"
+            />
+            <p class="text-xs text-n-slate-11">
+              {{ $t('INBOX_MGMT.CSAT.COOLDOWN.HELP') }}
+            </p>
+          </div>
 
           <WithLabel
             :label="$t('INBOX_MGMT.CSAT.SURVEY_RULE.LABEL')"
