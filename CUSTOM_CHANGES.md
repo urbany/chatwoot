@@ -1,5 +1,15 @@
 # Custom Changes
 
+## Architecture: `custom/` extension namespace
+
+Reference implementation, not yet adopted as the canonical patch — lives on the local scratch branch `refactor/custom-namespace-v4.15.1-v3` (not pushed to `origin`). Verified end-to-end (rubocop clean, all relocated methods resolve to their `Custom::` module, routes resolve) but pending a decision on whether to make it the source for the next monthly port.
+
+Chatwoot already ships an extension mechanism for exactly this fork's use case: `config/initializers/01_inject_enterprise_edition_module.rb` defines `Module#prepend_mod_with(name)`, used throughout upstream (`enterprise/`) to prepend a `Enterprise::<Klass>` module onto `<Klass>` without editing the OSS file. `custom/` mirrors that same mechanism (see `ChatwootApp.extensions`, `ChatwootApp.custom?`) for this fork's patches.
+
+Result on the v4.15.1-whatsapp-templates-v3 patch content: non-spec Ruby files with in-place OSS diffs dropped from 23 to 12, all but one of which are a single one-time `Klass.prepend_mod_with('Klass')` line (append-only, near-zero future conflict risk). The largest single-file diff (`whatsapp_cloud_service.rb`, 301 lines) drops to zero — that file becomes byte-identical to upstream. Full detail and the exact pattern to follow (including which cases must stay inline — DSL macros like `store`/`delegate`, routes, i18n, migrations, `app/javascript/**`) is in `.claude/skills/chatwoot-whatsapp-templates-patch/references/modifications.md`.
+
+Along the way this surfaced a real latent bug in upstream's `01_inject_enterprise_edition_module.rb`: `const_get_maybe_false` calls `mod&.const_defined?`, but `&.` only short-circuits on `nil`, not `false` — so a freshly-added, still-empty extension namespace crashes boot. Never surfaces for `enterprise/` (never empty); would surface for `custom/` if it ever landed without content in the same commit as its `config/application.rb` wiring.
+
 ## Version v4.15.1-whatsapp-templates-v2
 
 Date: 2026-06-24
