@@ -1,14 +1,40 @@
 # Custom Changes
 
-## Architecture: `custom/` extension namespace
+## Version v4.15.1-whatsapp-templates-v4
 
-Reference implementation, not yet adopted as the canonical patch — lives on the local scratch branch `refactor/custom-namespace-v4.15.1-v3` (not pushed to `origin`). Verified end-to-end (rubocop clean, all relocated methods resolve to their `Custom::` module, routes resolve) but pending a decision on whether to make it the source for the next monthly port.
+Date: 2026-07-13
 
-Chatwoot already ships an extension mechanism for exactly this fork's use case: `config/initializers/01_inject_enterprise_edition_module.rb` defines `Module#prepend_mod_with(name)`, used throughout upstream (`enterprise/`) to prepend a `Enterprise::<Klass>` module onto `<Klass>` without editing the OSS file. `custom/` mirrors that same mechanism (see `ChatwootApp.extensions`, `ChatwootApp.custom?`) for this fork's patches.
+Pure internal refactor — **no functional changes** versus `v4.15.1-whatsapp-templates-v3`. Relocates almost the entire patch out of directly-edited upstream files into a new `custom/` extension namespace, mirroring how `enterprise/` already uses `prepend_mod_with`/`include_mod_with` (see `config/initializers/01_inject_enterprise_edition_module.rb`, `ChatwootApp.extensions`, `ChatwootApp.custom?`). Non-spec Ruby files with in-place OSS diffs dropped from 23 to 12, all but one of which is now a single one-time `Klass.prepend_mod_with('Klass')` line. The largest single-file diff (`whatsapp_cloud_service.rb`, 301 lines) drops to zero — that file is now byte-identical to upstream. The exact pattern (including which cases must stay inline — DSL macros like `store`/`delegate`, routes, i18n, migrations, `app/javascript/**`) is documented in `.claude/skills/chatwoot-whatsapp-templates-patch/references/modifications.md`.
 
-Result on the v4.15.1-whatsapp-templates-v3 patch content: non-spec Ruby files with in-place OSS diffs dropped from 23 to 12, all but one of which are a single one-time `Klass.prepend_mod_with('Klass')` line (append-only, near-zero future conflict risk). The largest single-file diff (`whatsapp_cloud_service.rb`, 301 lines) drops to zero — that file becomes byte-identical to upstream. Full detail and the exact pattern to follow (including which cases must stay inline — DSL macros like `store`/`delegate`, routes, i18n, migrations, `app/javascript/**`) is in `.claude/skills/chatwoot-whatsapp-templates-patch/references/modifications.md`.
+Also includes two fixes surfaced while building this:
 
-Along the way this surfaced a real latent bug in upstream's `01_inject_enterprise_edition_module.rb`: `const_get_maybe_false` calls `mod&.const_defined?`, but `&.` only short-circuits on `nil`, not `false` — so a freshly-added, still-empty extension namespace crashes boot. Never surfaces for `enterprise/` (never empty); would surface for `custom/` if it ever landed without content in the same commit as its `config/application.rb` wiring.
+- **`lib/chatwoot_app.rb`**: `ChatwootApp.extensions` unconditionally included `'enterprise'` whenever `custom/` existed, regardless of whether `enterprise/` was actually present. The production CE Docker build (`build-custom-docker.yml`) always strips `enterprise/` entirely, so this would have crashed boot in production the moment `custom/` was introduced (hits a separate latent bug in `01_inject_enterprise_edition_module.rb#const_get_maybe_false`, where `mod&.const_defined?` only short-circuits on `nil`, not the `false` that a missing-namespace lookup returns). Fixed to only request an extension whose directory exists.
+- **`config/locales/en.yml`**: restores the `csat.not_sent_due_to_cooldown` key, present on `v4.15.1-whatsapp-templates-cumulative-v3` (this release's port source) but missing from the `v3` release branch/tag itself — pre-existing drift between those two refs, not introduced here.
+
+### Files Modified
+
+13 new files under `custom/app/**` (the relocated `Custom::` modules), plus `config/application.rb` (wiring), `lib/chatwoot_app.rb` (extensions fix), and a single-line/hook-only touch on the 12 files listed in `references/modifications.md`'s `custom/` section. Full feature set (WhatsApp templates CRUD/editor, reactions, agent-header truthfulness, CSAT inline processor, team reporting) is unchanged from `v3` — see that version's changelog entries below for the original feature-level file lists.
+
+### Frontend
+
+No changes — this release only restructures backend Ruby overrides.
+
+### Backend
+
+No behavior changes. See the two fixes above.
+
+### Database
+
+No database changes. Schema and migrations are byte-identical to `v4.15.1-whatsapp-templates-v3`.
+
+### Configuration
+
+No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- This release is a structural refactor of `v4.15.1-whatsapp-templates-v3`; behavior should be identical.
+- The next monthly port source should be `refs/heads/v4.15.1-whatsapp-templates-cumulative-v4`.
 
 ## Version v4.15.1-whatsapp-templates-v2
 
