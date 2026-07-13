@@ -34,13 +34,10 @@ module ChatwootApp
   end
 
   def self.extensions
-    if custom?
-      %w[enterprise custom]
-    elsif enterprise?
-      %w[enterprise]
-    else
-      %w[]
-    end
+    exts = []
+    exts << 'enterprise' if enterprise?
+    exts << 'custom' if custom?
+    exts
   end
 
   def self.advanced_search_allowed?
