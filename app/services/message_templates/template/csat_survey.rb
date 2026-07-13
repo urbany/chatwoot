@@ -33,8 +33,20 @@ class MessageTemplates::Template::CsatSurvey
   end
 
   def content_attributes
-    {
+    attrs = {
       display_type: csat_config['display_type'] || 'emoji'
     }
+    attrs[:items] = csat_items if inbox.whatsapp?
+    attrs
+  end
+
+  def csat_items
+    [
+      { title: '1', value: '1' },
+      { title: '2', value: '2' },
+      { title: '3', value: '3' },
+      { title: '4', value: '4' },
+      { title: '5', value: '5' }
+    ]
   end
 end
