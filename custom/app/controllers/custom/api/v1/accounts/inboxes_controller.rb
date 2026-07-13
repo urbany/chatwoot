@@ -25,12 +25,18 @@ module Custom::Api::V1::Accounts::InboxesController
     }
   end
 
+  # `super` (not a full literal override) so this composes with
+  # Enterprise::Api::V1::Accounts::InboxesController#inbox_attributes, which
+  # appends `auto_assignment_config: [:max_assignment_limit]` via its own
+  # `super + ee_inbox_attributes`. A full override here would sit closer in
+  # the prepend chain than Enterprise's and silently swallow that addition.
   def inbox_attributes
-    [:name, :avatar, :greeting_enabled, :greeting_message, :enable_email_collect, :csat_survey_enabled,
-     :enable_auto_assignment, :working_hours_enabled, :out_of_office_message, :timezone, :allow_messages_after_resolved,
-     :lock_to_single_conversation, :portal_id, :sender_name_type, :business_name,
-     { csat_config: [:display_type, :message, :style, :cooldown, :button_text, :language,
-                     { survey_rules: [:operator, { values: [] }],
-                       template: [:name, :template_id, :friendly_name, :content_sid, :approval_sid, :created_at, :language, :status] }] }]
+    super.map do |attr|
+      next attr unless attr.is_a?(Hash) && attr.key?(:csat_config)
+
+      { csat_config: [:display_type, :message, :style, :cooldown, :button_text, :language,
+                      { survey_rules: [:operator, { values: [] }],
+                        template: [:name, :template_id, :friendly_name, :content_sid, :approval_sid, :created_at, :language, :status] }] }
+    end
   end
 end

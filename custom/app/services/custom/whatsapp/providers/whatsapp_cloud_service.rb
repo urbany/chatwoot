@@ -1,7 +1,7 @@
 # rubocop:disable Metrics/ModuleLength
 # Prepended into Whatsapp::Providers::WhatsappCloudService via the OSS file's existing
 # `prepend_mod_with('Whatsapp::Providers::WhatsappCloudService')` call — no edits needed
-# on the upstream file itself. See custom/README.md for the extension convention.
+# on the upstream file itself.
 module Custom::Whatsapp::Providers::WhatsappCloudService
   class TemplateRequestTimeoutError < RuntimeError; end
 
@@ -120,6 +120,10 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
     log_template_error('Provider config validation timed out', action: 'validate_provider_config', error: e.message)
     raise
   end
+
+  private
+
+  # -- Overrides of upstream private methods (full replace) ----------------
 
   def send_text_message(phone_number, message)
     outgoing_content = whatsapp_outgoing_content(message)
