@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 
 import MessageMeta from '../MessageMeta.vue';
+import MessageReactions from '../MessageReactions.vue';
 
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../provider.js';
@@ -114,6 +115,13 @@ const replyToPreview = computed(() => {
       />
     </div>
     <slot />
+    <MessageReactions
+      :class="[
+        flexOrientationClass,
+        variant === MESSAGE_VARIANTS.EMAIL ? 'px-3' : '',
+      ]"
+      class="mt-2"
+    />
     <MessageMeta
       v-if="shouldShowMeta"
       :class="[

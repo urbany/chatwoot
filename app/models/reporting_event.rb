@@ -13,6 +13,7 @@
 #  account_id              :integer
 #  conversation_id         :integer
 #  inbox_id                :integer
+#  team_id                 :integer
 #  user_id                 :integer
 #
 # Indexes
@@ -23,6 +24,7 @@
 #  index_reporting_events_on_created_at              (created_at)
 #  index_reporting_events_on_inbox_id                (inbox_id)
 #  index_reporting_events_on_name                    (name)
+#  index_reporting_events_on_team_id                 (team_id)
 #  index_reporting_events_on_user_id                 (user_id)
 #  reporting_events__account_id__name__created_at    (account_id,name,created_at)
 #
@@ -36,6 +38,7 @@ class ReportingEvent < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :inbox, optional: true
   belongs_to :conversation, optional: true
+  belongs_to :team, optional: true
 
   # Scopes for filtering
   scope :filter_by_date_range, lambda { |range|
