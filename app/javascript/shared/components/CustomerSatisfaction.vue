@@ -54,7 +54,7 @@ export default {
         ?.feedback_message;
     },
     isButtonDisabled() {
-      if (!(this.selectedRating && this.feedback)) return true;
+      if (!this.selectedRating) return true;
       if (this.isUpdating) return true;
       return false;
     },

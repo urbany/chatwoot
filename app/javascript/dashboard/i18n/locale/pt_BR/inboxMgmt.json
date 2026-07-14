@@ -1011,6 +1011,12 @@
       "DISPLAY_TYPE": {
         "LABEL": "Tipo de exibição"
       },
+      "STYLE": {
+        "LABEL": "Tipo de pesquisa",
+        "DEFAULT": "Padrão (link para página de avaliação)",
+        "INLINE": "Na conversa (responda com 1 a 5)",
+        "HELP": "No modo 'Na conversa', o cliente avalia respondendo diretamente no chat com um número de 1 a 5 — sem precisar abrir uma página externa."
+      },
       "MESSAGE": {
         "LABEL": "Mensagem",
         "PLACEHOLDER": "Digite uma mensagem para mostrar aos usuários com o formulário"

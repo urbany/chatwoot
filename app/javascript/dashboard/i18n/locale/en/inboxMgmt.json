@@ -647,6 +647,7 @@
       "ACCOUNT_HEALTH": "Account Health",
       "CSAT": "CSAT",
       "VOICE": "Voice",
+      "WHATSAPP_TEMPLATES": "WhatsApp Templates",
       "CALLS": "Calls"
     },
     "VOICE_CONFIGURATION": {
@@ -1011,6 +1012,17 @@
       "DISPLAY_TYPE": {
         "LABEL": "Display type"
       },
+      "STYLE": {
+        "LABEL": "Survey style",
+        "DEFAULT": "Default (link to rating page)",
+        "INLINE": "Inline (reply with 1-5)",
+        "HELP": "In inline mode, customers rate by replying directly in the chat with a number 1-5 — no external page needed."
+      },
+      "COOLDOWN": {
+        "LABEL": "Cooldown period",
+        "HELP": "Don't send CSAT survey if one was already sent within this number of days",
+        "PLACEHOLDER": "Days (e.g., 7)"
+      },
       "MESSAGE": {
         "LABEL": "Message",
         "PLACEHOLDER": "Please enter a message to show users with the form"
@@ -1261,6 +1273,103 @@
       "OTHER_PROVIDERS": {
         "TITLE": "Other Providers",
         "DESCRIPTION": "Connect with Other Providers"
+      }
+    },
+    "WHATSAPP_TEMPLATES": {
+      "TITLE": "WhatsApp Templates",
+      "DESCRIPTION": "View and manage WhatsApp message templates synced from your WhatsApp Business Account. Templates must be approved by WhatsApp before they can be used to send messages.",
+      "SUMMARY": "{count} templates",
+      "SYNC_HINT": "Create and delete actions update this list immediately, but WhatsApp review states still sync in the background.",
+      "SYNC_REQUESTED": "Template sync started. Updated review states will appear after the background sync finishes.",
+      "LOADING": "Loading templates...",
+      "NO_TEMPLATES": "No templates found",
+      "NO_TEMPLATES_HINT": "Create templates in your Meta Business Manager. They will be synced automatically.",
+      "NO_FILTER_MATCH": "No templates match this state.",
+      "NEW_TEMPLATE": "New Template",
+      "DELETE_TEMPLATE": "Delete template",
+      "DELETE_CONFIRM": "Delete template \"{name}\"? This is permanent.",
+      "VIEW_DETAILS": "View component details",
+      "REJECTED_REASON": "Rejection reason",
+      "SUB_CATEGORY": "Sub-category",
+      "PARAMETER_FORMAT": "Parameter format",
+      "FORMAT": "({format})",
+      "FILTERS": {
+        "ALL": "All"
+      },
+      "STATUS": {
+        "APPROVED": "Approved",
+        "PENDING": "Pending review",
+        "REJECTED": "Rejected",
+        "PAUSED": "Paused",
+        "DISABLED": "Disabled",
+        "UNKNOWN": "Other"
+      },
+      "STATUS_HINTS": {
+        "APPROVED": "Ready to send in conversations once the template fits the use case.",
+        "PENDING": "Waiting for WhatsApp approval. This can take a little while after submission.",
+        "REJECTED": "This template needs changes in Meta before it can be approved and synced back here.",
+        "PAUSED": "WhatsApp has paused this template. Review its status in Meta before sending again.",
+        "DISABLED": "This template is disabled in WhatsApp and cannot be sent until it is restored.",
+        "UNKNOWN": "Review this template in Meta for the latest approval state."
+      },
+      "EDITOR": {
+        "TITLE": "New WhatsApp template",
+        "FIELDS": {
+          "NAME": "Name",
+          "LANGUAGE": "Language",
+          "CATEGORY": "Category",
+          "FORMAT": "Format",
+          "HEADER_TEXT": "Header text",
+          "MEDIA_URL": "Media URL",
+          "FOOTER_TEXT": "Footer text",
+          "TYPE": "Type",
+          "BUTTON_TEXT": "Button text",
+          "URL": "URL"
+        },
+        "SECTIONS": {
+          "HEADER": "Header",
+          "BODY": "Body",
+          "FOOTER": "Footer",
+          "BUTTONS": "Buttons"
+        },
+        "CATEGORIES": {
+          "MARKETING": "Marketing",
+          "UTILITY": "Utility",
+          "AUTHENTICATION": "Authentication"
+        },
+        "FORMATS": {
+          "TEXT": "Text",
+          "IMAGE": "Image",
+          "VIDEO": "Video",
+          "DOCUMENT": "Document"
+        },
+        "BUTTON_TYPES": {
+          "QUICK_REPLY": "Quick reply",
+          "URL": "Visit website",
+          "COPY_CODE": "Copy code"
+        },
+        "PREVIEW_TITLE": "Preview",
+        "PREVIEW_BODY_PLACEHOLDER": "Template body",
+        "PREVIEW_TIME": "Now",
+        "BODY_PLACEHOLDER": "Write the message customers will receive.",
+        "NAME_PLACEHOLDER": "order_update",
+        "MEDIA_URL_PLACEHOLDER": "https://example.com/header.jpg",
+        "URL_PLACEHOLDER": "https://example.com",
+        "ADD_BUTTON": "Add button",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "VARIABLE_HINT": "Use {first}, {second} for variables",
+        "SUCCESS": {
+          "CREATE": "Template submitted for WhatsApp approval.",
+          "DELETE": "Template deleted."
+        },
+        "ERROR": {
+          "CREATE_FAILED": "Failed to create template.",
+          "DELETE_FAILED": "Failed to delete template."
+        }
+      },
+      "ERROR": {
+        "FETCH_FAILED": "Failed to fetch WhatsApp templates. Please try again."
       }
     },
     "CHANNELS": {

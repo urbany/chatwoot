@@ -1300,6 +1300,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_13_184351) do
     t.float "value_in_business_hours"
     t.datetime "event_start_time", precision: nil
     t.datetime "event_end_time", precision: nil
+    t.bigint "team_id"
     t.index ["account_id", "name", "created_at"], name: "reporting_events__account_id__name__created_at"
     t.index ["account_id", "name", "inbox_id", "created_at"], name: "index_reporting_events_for_response_distribution"
     t.index ["account_id"], name: "index_reporting_events_on_account_id"
@@ -1307,6 +1308,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_13_184351) do
     t.index ["created_at"], name: "index_reporting_events_on_created_at"
     t.index ["inbox_id"], name: "index_reporting_events_on_inbox_id"
     t.index ["name"], name: "index_reporting_events_on_name"
+    t.index ["team_id"], name: "index_reporting_events_on_team_id"
     t.index ["user_id"], name: "index_reporting_events_on_user_id"
   end
 
