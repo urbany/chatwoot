@@ -20,6 +20,23 @@ describe Messages::MessageBuilder do
       message = message_builder
       expect(message.content).to eq params[:content]
     end
+
+    context 'when external_created_at is provided' do
+      let(:external_time) { 1.week.ago.to_i }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           external_created_at: external_time
+                                         })
+      end
+
+      it 'backdates the message created_at while keeping it in content_attributes' do
+        message = message_builder
+
+        expect(message.created_at.to_i).to eq external_time
+        expect(message.content_attributes[:external_created_at].to_i).to eq external_time
+      end
+    end
   end
 
   describe '#content_attributes' do

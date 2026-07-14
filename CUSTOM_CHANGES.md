@@ -1,5 +1,36 @@
 # Custom Changes
 
+## Version v4.15.1-whatsapp-templates-v5
+
+Date: 2026-07-14
+
+Builds on `v4.15.1-whatsapp-templates-v4`. `Messages::MessageBuilder` already accepted an `external_created_at` param (unix seconds) and stored it inside `content_attributes` via the `store :content_attributes, accessors: [..., :external_created_at, ...]` declaration on `Message`, but never applied it to the message's actual `created_at` column — messages backfilled by external integrations (e.g. the `whatsapp-2-chatwoot` backup middleware) always got the import time instead of their original timestamp, breaking chronological ordering and the displayed time. `external_created_at`, when present on the request, now also backdates the real `created_at` column, in addition to (not instead of) the existing `content_attributes` storage.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `.rubocop.yml`
+- (MODIFIED) `app/builders/messages/message_builder.rb`
+- (MODIFIED) `spec/builders/messages/message_builder_spec.rb`
+
+### Backend
+
+- `Messages::MessageBuilder#perform` now calls a new private `apply_external_created_at`, which sets `@message.created_at = Time.zone.at(params[:external_created_at].to_i)` before `save!`, when `external_created_at` is present on the request. The existing merge that stores `external_created_at` inside `content_attributes` is unchanged.
+- `.rubocop.yml`: added `app/builders/messages/message_builder.rb` to the `Metrics/ClassLength` exclude list (same precedent as `app/models/message.rb` and `app/models/conversation.rb`) — the class was already at the 175-line cap before this addition.
+
+### Database
+
+- No database changes.
+
+### Configuration
+
+- No new environment variables or application configuration.
+
+### Upgrade Notes
+
+- This release is a small additive bugfix on top of `v4.15.1-whatsapp-templates-v4`.
+- The next monthly port source should be `refs/heads/v4.15.1-whatsapp-templates-cumulative-v5`.
+
 ## Version v4.15.1-whatsapp-templates-v4
 
 Date: 2026-07-13
