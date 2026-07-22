@@ -107,21 +107,41 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
 
   def validate_provider_config?
     response = HTTParty.get(message_templates_path, headers: api_headers)
-    return true if response.success?
+    return waba_or_token_check_failure(response) unless response.success?
 
-    log_template_error(
-      'Provider config validation failed',
-      action: 'validate_provider_config',
-      error: template_response_error(response),
-      error_payload: template_error_payload(response)
-    )
-    false
+    # The templates check only proves the WABA/token pair, so verify the phone_number_id belongs to this WABA when it changes.
+    return true unless whatsapp_channel.provider_config_changed?
+
+    validate_phone_number_id
   rescue Net::OpenTimeout, Net::ReadTimeout => e
     log_template_error('Provider config validation timed out', action: 'validate_provider_config', error: e.message)
     raise
   end
 
   private
+
+  def waba_or_token_check_failure(response)
+    log_template_error(
+      'Provider config validation failed',
+      action: 'validate_provider_config',
+      error: template_response_error(response),
+      error_payload: template_error_payload(response)
+    )
+    log_transfer_failure('waba_or_token_check', response)
+  end
+
+  def validate_phone_number_id
+    phone_response = HTTParty.get("#{business_account_path}/phone_numbers?fields=id&limit=100", headers: api_headers)
+    ids = phone_response.parsed_response.is_a?(Hash) ? Array(phone_response.parsed_response['data']) : []
+    return true if phone_response.success? && ids.any? { |number| number['id'] == whatsapp_channel.provider_config['phone_number_id'].to_s }
+
+    log_template_error(
+      'Provider config validation failed: phone_number_id mismatch',
+      action: 'validate_provider_config',
+      error_payload: template_error_payload(phone_response)
+    )
+    log_transfer_failure('phone_number_id_check', phone_response)
+  end
 
   # -- Overrides of upstream private methods (full replace) ----------------
 
