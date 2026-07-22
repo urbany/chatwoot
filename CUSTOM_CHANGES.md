@@ -1,5 +1,81 @@
 # Custom Changes
 
+## Version v4.16.0-whatsapp-templates-v1
+
+Date: 2026-07-22
+
+Monthly port of the WhatsApp patch line (templates + editor, reactions, CSAT inline
+processor, timeout recovery, agent-header truthfulness, `custom/` extension namespace)
+onto upstream Chatwoot `v4.16.0`. Ported by cherry-picking the single commit at
+`refs/heads/v4.15.1-whatsapp-templates-cumulative-v5` onto `refs/tags/v4.16.0`.
+
+Three conflicts, all mechanical:
+
+- `app/javascript/dashboard/components-next/message/Message.vue`: kept both upstream's
+  new `report` context-menu action (Captain) and the patch's `react` action.
+- `app/javascript/dashboard/routes/dashboard/settings/inbox/Settings.vue`: kept both
+  upstream's new `Icon` component registration and the patch's `WhatsAppTemplatesPage`.
+- `db/schema.rb`: kept upstream's higher schema version (`2026_07_13_184351`); the
+  patch's `add_team_id_to_reporting_events` migration (`2026_06_25_000000`) is older and
+  already reflected in the table body, so it doesn't move the version marker.
+
+One semantic fix needed beyond the mechanical cherry-pick: upstream `v4.16.0` added a
+`phone_number_id`/WABA cross-check to the OSS `validate_provider_config?` (guards the
+embedded-to-manual transfer flow). The patch's `custom/` override of that method fully
+replaces it for Bearer-header auth and had silently dropped the new check when carried
+forward from the `v4.15.1` line (which didn't have it). Restored the check on top of the
+patch's auth/logging style in
+`custom/app/services/custom/whatsapp/providers/whatsapp_cloud_service.rb`, and updated
+the corresponding stubs in `spec/models/channel/whatsapp_spec.rb` to use header-based
+auth consistently across all three `validate_provider_config` examples.
+
+Also fixed two pre-existing RuboCop offenses surfaced by the newer RuboCop config in
+`v4.16.0` (`Metrics/ParameterLists`, `Rails/Blank`) in
+`app/services/messages/reaction_update_service.rb` and
+`app/services/whatsapp/send_reaction_service.rb`: the reaction service's `actor_type`/
+`actor_id`/`actor_name` keyword params are now grouped into a single `actor:` hash.
+
+### Files Modified
+
+Same file set as `v4.15.1-whatsapp-templates-v5` (see that section below for the full
+backend/frontend list), plus:
+
+- (MODIFIED) `app/javascript/dashboard/components-next/message/Message.vue` (conflict resolution)
+- (MODIFIED) `app/javascript/dashboard/routes/dashboard/settings/inbox/Settings.vue` (conflict resolution)
+- (MODIFIED) `db/schema.rb` (conflict resolution)
+- (MODIFIED) `app/services/messages/reaction_update_service.rb` (rubocop fix)
+- (MODIFIED) `app/services/whatsapp/send_reaction_service.rb` (rubocop fix)
+- (MODIFIED) `custom/app/services/custom/whatsapp/incoming_message_base_service.rb` (call site update for `actor:` hash)
+- (MODIFIED) `custom/app/services/custom/whatsapp/providers/whatsapp_cloud_service.rb` (restore phone_number_id check)
+- (MODIFIED) `spec/models/channel/whatsapp_spec.rb` (stub updates)
+
+### Backend
+
+- `Custom::Whatsapp::Providers::WhatsappCloudService#validate_provider_config?` now
+  performs the same WABA/phone_number_id verification as upstream when
+  `provider_config` changes, in addition to the message-templates reachability check,
+  using the patch's Bearer-header auth and template logging helpers.
+- `Messages::ReactionUpdateService.new` now takes `actor: { type:, id:, name: }` instead
+  of three separate `actor_type:`/`actor_id:`/`actor_name:` keywords (both call sites
+  updated: `Whatsapp::SendReactionService` and
+  `Custom::Whatsapp::IncomingMessageBaseService`).
+
+### Database
+
+- No database changes beyond what `v4.15.1-whatsapp-templates-v5` already introduced
+  (`team_id` on `reporting_events`).
+
+### Configuration
+
+- No new environment variables or application configuration.
+- Create/delete are exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- Upstream base: `v4.16.0`. Port source: `refs/heads/v4.15.1-whatsapp-templates-cumulative-v5`.
+- The next monthly port source should be the cumulative helper branch created from this
+  release: `refs/heads/v4.16.0-whatsapp-templates-cumulative-v1`.
+
 ## Version v4.15.1-whatsapp-templates-v5
 
 Date: 2026-07-14
