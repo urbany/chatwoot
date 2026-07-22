@@ -147,6 +147,7 @@ Rails.application.routes.draw do
             scope module: :conversations do
               resources :messages, only: [:index, :create, :destroy, :update] do
                 member do
+                  post :reaction
                   post :translate
                   post :retry
                 end
@@ -329,6 +330,7 @@ Rails.application.routes.draw do
 
           resources :inboxes, only: [] do
             resource :assignment_policy, only: [:show, :create, :destroy], module: :inboxes
+            resources :whatsapp_templates, only: [:index, :create, :destroy], module: :inboxes
           end
 
           namespace :twitter do

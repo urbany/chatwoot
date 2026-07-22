@@ -53,3 +53,5 @@ module Api::V1::Accounts::Concerns::WhatsappHealthManagement
     end
   end
 end
+
+Api::V1::Accounts::Concerns::WhatsappHealthManagement.prepend_mod_with('Api::V1::Accounts::Concerns::WhatsappHealthManagement')

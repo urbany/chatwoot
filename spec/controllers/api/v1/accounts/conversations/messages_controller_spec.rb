@@ -318,6 +318,85 @@ RSpec.describe 'Conversation Messages API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id/reaction' do
+    let(:agent) { create(:user, account: account, role: :agent) }
+    let(:channel) do
+      create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+    end
+    let(:inbox) { create(:inbox, account: account, channel: channel) }
+    let(:contact) { create(:contact, account: account, name: 'Contact User') }
+    let(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: '16505551234') }
+    let!(:conversation) { create(:conversation, inbox: inbox, account: account, contact: contact, contact_inbox: contact_inbox) }
+    let!(:message) do
+      create(:message, conversation: conversation, account: account, inbox: inbox, sender: contact,
+                       message_type: :incoming, source_id: 'wamid.target.message')
+    end
+    let(:params) { { emoji: '😀' } }
+    let(:phone_messages_url) { "#{channel.provider_service.send(:phone_id_path)}/messages" }
+
+    before do
+      create(:inbox_member, inbox: inbox, user: agent)
+    end
+
+    it 'sends the reaction through WhatsApp Cloud and updates the target message' do
+      stub_request(:post, phone_messages_url)
+        .with(
+          body: {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: contact_inbox.source_id,
+            type: 'reaction',
+            reaction: {
+              message_id: message.source_id,
+              emoji: '😀'
+            }
+          }.to_json
+        )
+        .to_return(status: 200, body: { messages: [{ id: 'wamid.business.reaction' }] }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/reaction",
+           params: params,
+           headers: agent.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:success)
+
+      business_reaction = message.reload.content_attributes.dig('reactions', 'business')
+      expect(business_reaction).to include(
+        'actor_type' => 'business',
+        'actor_id' => agent.id,
+        'actor_name' => agent.name,
+        'emoji' => '😀',
+        'reaction_source_id' => 'wamid.business.reaction'
+      )
+    end
+
+    it 'rejects reactions outside the 24-hour reply window' do
+      allow_any_instance_of(Conversation).to receive(:can_reply?).and_return(false)
+
+      post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/reaction",
+           params: params,
+           headers: agent.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('You can only react within the 24-hour WhatsApp reply window')
+    end
+
+    it 'rejects non-incoming targets' do
+      message.update!(message_type: :outgoing, sender: agent)
+
+      post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/reaction",
+           params: params,
+           headers: agent.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('You can only react to incoming WhatsApp user messages')
+    end
+  end
+
   describe 'PATCH /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id' do
     let(:api_channel) { create(:channel_api, account: account) }
     let(:api_inbox) { create(:inbox, channel: api_channel, account: account) }
