@@ -22,9 +22,11 @@ module Custom::Whatsapp::IncomingMessageBaseService
     Messages::ReactionUpdateService.new(
       message: target_message,
       actor_key: 'contact',
-      actor_type: 'contact',
-      actor_id: target_message.conversation.contact_id,
-      actor_name: reaction_actor_name(target_message),
+      actor: {
+        type: 'contact',
+        id: target_message.conversation.contact_id,
+        name: reaction_actor_name(target_message)
+      },
       emoji: reaction[:emoji] || reaction['emoji'],
       metadata: reaction_metadata(message)
     ).perform

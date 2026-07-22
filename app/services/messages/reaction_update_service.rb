@@ -1,12 +1,12 @@
 class Messages::ReactionUpdateService
   attr_reader :message, :actor_key, :actor_type, :actor_id, :actor_name, :emoji, :metadata
 
-  def initialize(message:, actor_key:, actor_type:, actor_id: nil, actor_name: nil, emoji:, metadata: {})
+  def initialize(message:, actor_key:, actor:, emoji:, metadata: {})
     @message = message
     @actor_key = actor_key
-    @actor_type = actor_type
-    @actor_id = actor_id
-    @actor_name = actor_name
+    @actor_type = actor[:type]
+    @actor_id = actor[:id]
+    @actor_name = actor[:name]
     @emoji = emoji
     @metadata = metadata
   end

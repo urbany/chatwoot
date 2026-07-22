@@ -22,9 +22,7 @@ class Whatsapp::SendReactionService
     Messages::ReactionUpdateService.new(
       message: message,
       actor_key: 'business',
-      actor_type: 'business',
-      actor_id: user&.id,
-      actor_name: actor_name,
+      actor: { type: 'business', id: user&.id, name: actor_name },
       emoji: emoji,
       metadata: {
         reaction_source_id: reaction_source_id,
@@ -49,7 +47,7 @@ class Whatsapp::SendReactionService
   end
 
   def target_message_valid?
-    message.incoming? && !message.private? && !message.deleted.present? && !message.activity?
+    message.incoming? && !message.private? && message.deleted.blank? && !message.activity?
   end
 
   def contact_phone_number
