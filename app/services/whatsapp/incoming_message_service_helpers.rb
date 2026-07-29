@@ -89,3 +89,5 @@ module Whatsapp::IncomingMessageServiceHelpers
     Whatsapp::MessageDedupLock.new(messages_data.first[:id]).acquire!
   end
 end
+
+Whatsapp::IncomingMessageServiceHelpers.prepend_mod_with('Whatsapp::IncomingMessageServiceHelpers')

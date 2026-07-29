@@ -98,3 +98,5 @@ class Twilio::SendOnTwilioService < Base::SendOnChannelService
     message.outgoing? || message.template?
   end
 end
+
+Twilio::SendOnTwilioService.prepend_mod_with('Twilio::SendOnTwilioService')

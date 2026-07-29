@@ -355,6 +355,7 @@ en:
         permission_granted: '%{contact_name} accepted the call permission request.'
       csat:
         not_sent_due_to_messaging_window: 'CSAT survey not sent due to outgoing message restrictions'
+        not_sent_due_to_cooldown: 'CSAT survey not sent: cooldown of %{cooldown_days}d active — last survey was sent %{time_ago}'
       auto_resolve:
         not_sent_due_to_messaging_window: 'Auto-resolve message not sent due to outgoing message restrictions'
       muted: '%{user_name} has muted the conversation'

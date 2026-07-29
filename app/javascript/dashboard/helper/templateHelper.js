@@ -1,13 +1,22 @@
-import { processVariable, buildWhatsAppProcessedParams } from '@chatwoot/utils';
+import {
+  processVariable,
+  buildWhatsAppProcessedParams,
+  COMPONENT_TYPES as SHARED_COMPONENT_TYPES,
+} from '@chatwoot/utils';
 
 // Constants and pure template helpers are shared with the mobile app via
 // @chatwoot/utils so the logic lives in one place.
 export {
   MEDIA_FORMATS,
-  COMPONENT_TYPES,
   findComponentByType,
   processVariable,
 } from '@chatwoot/utils';
+
+// @chatwoot/utils does not model FOOTER (composer never needs to fill it in),
+// but the template editor still needs to add/remove a footer component.
+export const COMPONENT_TYPES = { ...SHARED_COMPONENT_TYPES, FOOTER: 'FOOTER' };
+
+export const VARIABLE_PATTERN = /{{([^}]+)}}/g;
 
 export const DEFAULT_LANGUAGE = 'en';
 export const DEFAULT_CATEGORY = 'UTILITY';
@@ -18,7 +27,7 @@ export const allKeysRequired = value => {
 };
 
 export const replaceTemplateVariables = (templateText, processedParams) => {
-  return templateText.replace(/{{([^}]+)}}/g, (match, variable) => {
+  return templateText.replace(VARIABLE_PATTERN, (match, variable) => {
     const variableKey = processVariable(variable);
     return processedParams.body?.[variableKey] || `{{${variable}}}`;
   });
