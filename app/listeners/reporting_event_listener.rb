@@ -14,6 +14,7 @@ class ReportingEventListener < BaseListener
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: conversation.assignee_id,
+      team_id: conversation.team_id,
       conversation_id: conversation.id,
       event_start_time: conversation.created_at,
       event_end_time: event_end_time
@@ -37,6 +38,7 @@ class ReportingEventListener < BaseListener
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: message.sender_id,
+      team_id: conversation.team_id,
       conversation_id: conversation.id,
       event_start_time: last_non_human_activity(conversation),
       event_end_time: message.created_at
@@ -63,6 +65,7 @@ class ReportingEventListener < BaseListener
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: conversation.assignee_id,
+      team_id: conversation.team_id,
       conversation_id: conversation.id,
       event_start_time: waiting_since,
       event_end_time: message.created_at
@@ -90,6 +93,7 @@ class ReportingEventListener < BaseListener
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: conversation.assignee_id,
+      team_id: conversation.team_id,
       conversation_id: conversation.id,
       event_start_time: conversation.created_at,
       event_end_time: event_end_time
@@ -133,6 +137,7 @@ class ReportingEventListener < BaseListener
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: conversation.assignee_id,
+      team_id: conversation.team_id,
       conversation_id: conversation.id,
       event_start_time: start_time,
       event_end_time: event_end_time
@@ -140,6 +145,22 @@ class ReportingEventListener < BaseListener
     reporting_event.save!
   end
 
+  def create_captain_inference_event(event, event_name)
+    conversation = extract_conversation_and_account(event)[0]
+    time_to_event = event.timestamp.to_i - conversation.created_at.to_i
+
+    ReportingEvent.create!(
+      name: event_name,
+      value: time_to_event,
+      account_id: conversation.account_id,
+      inbox_id: conversation.inbox_id,
+      user_id: conversation.assignee_id,
+      team_id: conversation.team_id,
+      conversation_id: conversation.id,
+      event_start_time: conversation.created_at,
+      event_end_time: event.timestamp
+    )
+  end
   def create_bot_resolved_event(conversation, reporting_event)
     return unless conversation.inbox.active_bot?
     # We don't want to create a bot_resolved event if there is user interaction on the conversation
