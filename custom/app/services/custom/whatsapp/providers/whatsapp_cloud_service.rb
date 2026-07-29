@@ -154,7 +154,7 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
       body: {
         messaging_product: 'whatsapp',
         context: whatsapp_reply_context(message),
-        to: phone_number,
+        **recipient_params(phone_number),
         text: { body: outgoing_content },
         type: 'text'
       }.to_json
@@ -174,7 +174,7 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
       body: {
         :messaging_product => 'whatsapp',
         :context => whatsapp_reply_context(message),
-        :to => phone_number,
+        **recipient_params(phone_number),
         :type => type,
         type.to_s => type_content
       }.to_json
@@ -359,7 +359,7 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
     {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
-      to: phone_number,
+      **recipient_params(phone_number),
       type: 'reaction',
       reaction: {
         message_id: message_id,
