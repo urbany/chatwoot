@@ -1,5 +1,99 @@
 # Custom Changes
 
+## Version v4.16.2-whatsapp-templates-v1
+
+Date: 2026-07-29
+
+Monthly port of the WhatsApp patch line (templates + editor, reactions, CSAT inline
+processor, timeout recovery, agent-header truthfulness, `custom/` extension namespace)
+onto upstream Chatwoot `v4.16.2`. Ported by cherry-picking the single commit at
+`refs/heads/v4.16.0-whatsapp-templates-cumulative-v1` onto `refs/tags/v4.16.2`.
+
+Three conflicts, all mechanical:
+
+- `app/javascript/dashboard/components-next/message/bubbles/Base.vue`: kept both
+  upstream's new `CaptainGenerationDetails`-wrapped meta display and the patch's
+  `MessageReactions` component.
+- `app/javascript/dashboard/components/ui/ContextMenu.vue`: pure formatting difference
+  (upstream reflowed a one-line guard into a commented multi-line form); kept upstream's
+  version, logic unchanged.
+- `app/javascript/dashboard/routes/dashboard/settings/inbox/Settings.vue`: kept both
+  upstream's new `Icon` component registration and the patch's `WhatsAppTemplatesPage`
+  (later removed — see below).
+
+One additional non-conflicting merge required manual reconciliation:
+`app/javascript/dashboard/helper/templateHelper.js`. Upstream moved
+`MEDIA_FORMATS`/`COMPONENT_TYPES`/`findComponentByType`/`processVariable`/
+`buildTemplateParameters` into the shared `@chatwoot/utils` package (bumped to `0.0.56`,
+also used by the mobile app). The shared package's `COMPONENT_TYPES` does not include
+`FOOTER` (the composer never fills one in) and does not export `VARIABLE_PATTERN`, both
+of which the patch's template editor needs. Resolved by re-exporting the shared
+constants/helpers directly, locally extending `COMPONENT_TYPES` with `FOOTER`, and
+keeping a local `VARIABLE_PATTERN` export. `buildTemplateParameters` now delegates to
+the shared `buildWhatsAppProcessedParams` (verified behaviorally equivalent to the
+patch's previous manual implementation: body vars, media header incl. document
+`media_name`, and URL/COPY_CODE button params).
+
+One semantic fix needed beyond the mechanical cherry-pick: upstream `v4.16.1` added
+`recipient_params` to `Whatsapp::Providers::BaseService`, routing Business-Scoped User
+IDs (BSUID, coexistence contacts with no phone number) via a `recipient` field instead of
+`to`. The patch's `custom/` overrides of `send_text_message`, `send_attachment_message`,
+and `send_reaction` (`reaction_request_body`) fully replace those methods and had
+hardcoded `to: phone_number`, silently dropping messages to BSUID contacts. Updated all
+three to use `recipient_params(phone_number)` in
+`custom/app/services/custom/whatsapp/providers/whatsapp_cloud_service.rb`.
+
+Also removed the now-dead `Icon` component registration from `Settings.vue`: it was only
+used by an Instagram restriction banner that upstream removed in `v4.16.1`
+(`fix(instagram): remove resolved restriction banners`), and ESLint's
+`vue/no-unused-components` flagged it once the banner markup was gone.
+
+Audited the remaining upstream WhatsApp-related commits between `v4.16.0` and `v4.16.2`
+(`d644c207f0` health monitoring, `166a41c31c` reply-window guard, `e65e18e9c5` phone
+number normalization, `2144de92f2` coexistence conversation reuse, `b2716e15e1` number
+deregistration) against every file the patch overrides via `custom/`. None of their
+changed methods are shadowed by a `custom/` override, so no further fixes were needed.
+
+### Files Modified
+
+Same file set as `v4.16.0-whatsapp-templates-v1` (see that section below for the full
+backend/frontend list), plus:
+
+- (MODIFIED) `app/javascript/dashboard/components-next/message/bubbles/Base.vue` (conflict resolution)
+- (MODIFIED) `app/javascript/dashboard/components/ui/ContextMenu.vue` (conflict resolution, no logic change)
+- (MODIFIED) `app/javascript/dashboard/routes/dashboard/settings/inbox/Settings.vue` (conflict resolution + removed dead `Icon` registration)
+- (MODIFIED) `app/javascript/dashboard/helper/templateHelper.js` (re-aligned with `@chatwoot/utils` 0.0.56)
+- (MODIFIED) `custom/app/services/custom/whatsapp/providers/whatsapp_cloud_service.rb` (BSUID recipient routing)
+
+### Backend
+
+- `Custom::Whatsapp::Providers::WhatsappCloudService#send_text_message`,
+  `#send_attachment_message`, and `#reaction_request_body` now route Business-Scoped User
+  ID recipients via `recipient_params`, matching upstream's `v4.16.1` BSUID fix instead of
+  always sending `to: phone_number`.
+
+### Frontend
+
+- `templateHelper.js` now sources `MEDIA_FORMATS`, `findComponentByType`, and
+  `processVariable` from `@chatwoot/utils` (matching upstream and the mobile app), while
+  still locally providing `COMPONENT_TYPES.FOOTER` and `VARIABLE_PATTERN` for the
+  template editor.
+
+### Database
+
+- No database changes beyond what `v4.16.0-whatsapp-templates-v1` already introduced.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- Create/delete are exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- Upstream base: `v4.16.2`. Port source: `refs/heads/v4.16.0-whatsapp-templates-cumulative-v1`.
+- The next monthly port source should be the cumulative helper branch created from this
+  release: `refs/heads/v4.16.2-whatsapp-templates-cumulative-v1`.
+
 ## Version v4.16.0-whatsapp-templates-v1
 
 Date: 2026-07-22
