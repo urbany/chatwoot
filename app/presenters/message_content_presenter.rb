@@ -31,3 +31,5 @@ class MessageContentPresenter < SimpleDelegator
     "#{ENV.fetch('FRONTEND_URL', nil)}/survey/responses/#{conversation_uuid}"
   end
 end
+
+MessageContentPresenter.prepend_mod_with('MessageContentPresenter')

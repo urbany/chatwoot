@@ -72,13 +72,14 @@ export const FORMATTING = {
     menu: [],
   },
   'Channel::Whatsapp': {
-    marks: ['strong', 'em', 'code', 'strike'],
+    marks: ['strong', 'em', 'code', 'link', 'strike'],
     nodes: ['bulletList', 'orderedList', 'codeBlock'],
     menu: [
       'copilot',
       'strong',
       'em',
       'code',
+      'link',
       'strike',
       'bulletList',
       'orderedList',

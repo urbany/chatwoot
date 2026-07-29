@@ -3,6 +3,7 @@ import { computed } from 'vue';
 
 import MessageMeta from '../MessageMeta.vue';
 import CaptainGenerationDetails from '../CaptainGenerationDetails.vue';
+import MessageReactions from '../MessageReactions.vue';
 
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../provider.js';
@@ -137,6 +138,13 @@ const replyToPreview = computed(() => {
       />
     </div>
     <slot />
+    <MessageReactions
+      :class="[
+        flexOrientationClass,
+        variant === MESSAGE_VARIANTS.EMAIL ? 'px-3' : '',
+      ]"
+      class="mt-2"
+    />
     <template v-if="shouldShowMeta">
       <CaptainGenerationDetails
         v-if="isCaptainMessage"

@@ -65,6 +65,8 @@
     "UNSUPPORTED_MESSAGE_WHATSAPP": "This message is unsupported. You can view this message on the WhatsApp app.",
     "SUCCESS_DELETE_MESSAGE": "Message deleted successfully",
     "FAIL_DELETE_MESSSAGE": "Couldn't delete message! Try again",
+    "SUCCESS_REACTION": "Reaction sent",
+    "FAIL_REACTION": "Couldn't react to message! Try again",
     "NO_RESPONSE": "No response",
     "RESPONSE": "Response",
     "RATING_TITLE": "Rating",
@@ -309,6 +311,7 @@
     },
     "CONTEXT_MENU": {
       "COPY": "Copy",
+      "REACT": "React",
       "REPLY_TO": "Reply to this message",
       "DELETE": "Delete",
       "CREATE_A_CANNED_RESPONSE": "Add to canned responses",

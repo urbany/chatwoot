@@ -43,14 +43,49 @@ export const getTypingUsersText = (users = []) => {
   return ['TYPING.MULTIPLE', { user: firstUser.name, count: count - 1 }];
 };
 
+const getWhatsAppAgentHeaderSenderName = sender =>
+  sender?.available_name || sender?.name || '';
+
+const hasWhatsAppAgentHeader = (content = '', senderName = '') => {
+  if (!senderName) return false;
+
+  const header = `**${senderName}:**`;
+  return content === header || content.startsWith(`${header}\n`);
+};
+
+const buildPendingMessageContent = ({
+  message,
+  contentAttributes,
+  sender,
+  templateParams,
+}) => {
+  const content = message || null;
+  if (templateParams) return content;
+
+  const headerEnabled =
+    contentAttributes?.whatsapp_agent_header_enabled === true;
+  const senderName = getWhatsAppAgentHeaderSenderName(sender);
+
+  if (!headerEnabled || !senderName) {
+    return content;
+  }
+
+  if (hasWhatsAppAgentHeader(message, senderName)) {
+    return content;
+  }
+
+  const header = `**${senderName}:**`;
+  return message ? `${header}\n${message}` : header;
+};
+
 export const createPendingMessage = data => {
   const timestamp = Math.floor(new Date().getTime() / 1000);
   const tempMessageId = getUuid();
-  const { message, file } = data;
+  const { file } = data;
   const tempAttachments = [{ id: tempMessageId }];
   const pendingMessage = {
     ...data,
-    content: message || null,
+    content: buildPendingMessageContent(data),
     id: tempMessageId,
     echo_id: tempMessageId,
     status: MESSAGE_STATUS.PROGRESS,
