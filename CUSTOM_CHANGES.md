@@ -1,5 +1,35 @@
 # Custom Changes
 
+## Version v4.18.0-whatsapp-templates-v1
+
+Date: 2026-09-25
+
+Monthly port of the WhatsApp patch line onto upstream Chatwoot `v4.18.0`.
+Ported by cherry-picking `refs/remotes/origin/v4.16.2-whatsapp-templates-cumulative-v1`
+onto `refs/tags/v4.18.0`.
+
+The port resolved conflicts in `.rubocop.yml`, the WhatsApp channel API, pending
+message helpers and specs, inbox settings registration, the reporting listener,
+Twilio specs, and the WhatsApp Cloud provider spec. Upstream manual WhatsApp health
+management remains in the OSS file while the patch behavior stays in `custom/`.
+
+### Database
+
+- No new database changes were introduced by this port; the existing cumulative
+  patch migration remains unchanged.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- Create/delete are exposed only for WhatsApp Cloud API inboxes; 360dialog remains read-only.
+
+### Upgrade Notes
+
+- Upstream base: `v4.18.0`.
+- Port source: `refs/remotes/origin/v4.16.2-whatsapp-templates-cumulative-v1`.
+- The next monthly port source should be the cumulative helper branch created from this release:
+  `refs/heads/v4.18.0-whatsapp-templates-cumulative-v1`.
+
 ## Version v4.16.2-whatsapp-templates-v1
 
 Date: 2026-07-29
