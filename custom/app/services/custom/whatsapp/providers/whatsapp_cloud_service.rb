@@ -81,12 +81,14 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
     raise
   end
 
-  def fetch_whatsapp_templates(url, page: 1)
-    response = HTTParty.get(url, headers: api_headers)
+  def fetch_whatsapp_templates(url, after: nil, page: 1)
+    options = { headers: api_headers }
+    options[:query] = { after: after } if after.present?
+    response = HTTParty.get(url, options)
     return handle_template_fetch_failure(response, url, page) unless response.success?
 
     templates = response['data'] || []
-    next_page_url = next_url(response)
+    next_cursor = response.dig('paging', 'cursors', 'after')
 
     log_template_info(
       'Template page fetched',
@@ -94,10 +96,10 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
       page: page,
       request_url: url,
       fetched_count: templates.length,
-      has_next_page: next_page_url.present?
+      has_next_page: next_cursor.present?
     )
 
-    return templates + fetch_whatsapp_templates(next_page_url, page: page + 1) if next_page_url.present?
+    return templates + fetch_whatsapp_templates(url, after: next_cursor, page: page + 1) if next_cursor.present?
 
     templates
   rescue Net::OpenTimeout, Net::ReadTimeout => e
