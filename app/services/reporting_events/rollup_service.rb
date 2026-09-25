@@ -34,7 +34,8 @@ class ReportingEvents::RollupService
     {
       account: @account.id,
       agent: @reporting_event.user_id,
-      inbox: @reporting_event.inbox_id
+      inbox: @reporting_event.inbox_id,
+      team: @reporting_event.team_id
     }
   end
 

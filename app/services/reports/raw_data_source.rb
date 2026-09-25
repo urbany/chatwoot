@@ -98,10 +98,7 @@ class Reports::RawDataSource < Reports::DataSource
   end
 
   def summary_scope
-    scope = account.reporting_events.where(created_at: range)
-    return scope.joins(:conversation) if dimension_type == 'team'
-
-    scope
+    account.reporting_events.where(created_at: range)
   end
 
   def summary_conversation_counts
@@ -142,7 +139,7 @@ class Reports::RawDataSource < Reports::DataSource
       'account' => :account_id,
       'agent' => :user_id,
       'inbox' => :inbox_id,
-      'team' => 'conversations.team_id'
+      'team' => :team_id
     }[dimension_type]
   end
 

@@ -27,6 +27,7 @@ import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import WhatsappCallingPage from './settingsPage/WhatsappCallingPage.vue';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
+import WhatsAppTemplatesPage from './settingsPage/WhatsAppTemplatesPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import AccountHealth from './components/AccountHealth.vue';
 import TwilioHealth from './components/TwilioHealth.vue';
@@ -90,6 +91,7 @@ export default {
     Widget,
     AccessToken,
     Icon,
+    WhatsAppTemplatesPage,
   },
   mixins: [inboxMixin],
   setup() {
@@ -296,6 +298,16 @@ export default {
           {
             key: 'calls-configuration',
             name: this.$t('INBOX_MGMT.TABS.CALLS'),
+          },
+        ];
+      }
+
+      if (this.isAWhatsAppChannel) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'whatsapp-templates',
+            name: this.$t('INBOX_MGMT.TABS.WHATSAPP_TEMPLATES'),
           },
         ];
       }
@@ -1464,6 +1476,9 @@ export default {
           :is-loading="isTransferringWhatsAppToManual"
           @reconnect="transferWhatsAppToManualSetup"
         />
+      </div>
+      <div v-if="selectedTabKey === 'whatsapp-templates'" class="mx-8">
+        <WhatsAppTemplatesPage :inbox="inbox" />
       </div>
     </section>
   </div>

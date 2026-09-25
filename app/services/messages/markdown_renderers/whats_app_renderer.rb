@@ -17,6 +17,9 @@ class Messages::MarkdownRenderers::WhatsAppRenderer < Messages::MarkdownRenderer
   end
 
   def link(node)
+    out('*')
+    out(:children)
+    out('* ')
     out(node.url)
   end
 
