@@ -1,5 +1,53 @@
 # Custom Changes
 
+## Version v4.18.0-whatsapp-templates-v2
+
+Date: 2026-09-28
+
+Builds on `v4.18.0-whatsapp-templates-v1` with WhatsApp Cloud provider improvements:
+template fetching now follows cursor-based pagination and sends the template access
+token as a Bearer header; outgoing attachments use the WhatsApp media upload service,
+falling back to a download link when no uploaded media result is available.
+
+### Files Modified
+
+- (MODIFIED) `CUSTOM_CHANGES.md`
+- (MODIFIED) `custom/app/services/custom/whatsapp/providers/whatsapp_cloud_service.rb`
+- (MODIFIED) `spec/services/whatsapp/providers/whatsapp_cloud_service_spec.rb`
+
+### Backend
+
+- Follows the `paging.cursors.after` cursor when fetching WhatsApp templates instead of
+  relying on the response's `paging.next` URL.
+- Sends the template access token in the `Authorization: Bearer` header for template
+  fetch requests.
+- Builds outgoing attachment content from `Whatsapp::MediaUploadService` when possible,
+  with the attachment download URL as a fallback.
+
+### Frontend
+
+- No frontend changes.
+
+### Database
+
+- No database changes in this iteration; the existing cumulative patch migration is
+  unchanged.
+
+### Configuration
+
+- No new environment variables or application configuration.
+- Follows upstream WhatsApp Cloud Graph API version choices.
+- Create/delete remain exposed only for WhatsApp Cloud API inboxes; 360dialog remains
+  read-only.
+
+### Upgrade Notes
+
+- Upstream base: `v4.18.0`.
+- Builds on `refs/tags/4.18.0-whatsapp-templates-v1`; the previous cumulative baseline is
+  `refs/heads/v4.18.0-whatsapp-templates-cumulative-v1`.
+- The next monthly port source should be the cumulative helper branch created from this
+  release: `refs/heads/v4.18.0-whatsapp-templates-cumulative-v2`.
+
 ## Version v4.18.0-whatsapp-templates-v1
 
 Date: 2026-09-25
