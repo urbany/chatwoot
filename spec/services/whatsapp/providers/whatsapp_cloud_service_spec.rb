@@ -28,8 +28,11 @@ describe Whatsapp::Providers::WhatsappCloudService do
   let(:whatsapp_response) { { messages: [{ id: 'message_id' }] } }
   let(:media_upload_url) { 'https://graph.facebook.com/v22.0/123456789/media' }
 
+  let(:message_templates_url) { 'https://graph.facebook.com/v14.0/123456789/message_templates' }
+
   before do
-    stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+    stub_request(:get, message_templates_url)
+      .with(headers: service.api_headers)
     stub_request(:post, media_upload_url)
       .to_return(status: 200, body: { id: 'uploaded_media_id' }.to_json, headers: response_headers)
   end
@@ -464,8 +467,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             body: {
               data: [{ id: '123456789', name: 'test_template' }],
               paging: {
-                cursors: { after: 'cursor-1' },
-                next: 'https://graph.facebook.com/v14.0/123456789/message_templates?after=cursor-1&access_token=test_key'
+                cursors: { after: 'cursor-1' }
               }
             }.to_json
           )
@@ -477,8 +479,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             body: {
               data: [{ id: '123456789', name: 'next_template' }],
               paging: {
-                cursors: { after: 'cursor-2' },
-                next: 'https://graph.facebook.com/v14.0/123456789/message_templates?after=cursor-2&access_token=test_key'
+                cursors: { after: 'cursor-2' }
               }
             }.to_json
           )
@@ -523,13 +524,16 @@ describe Whatsapp::Providers::WhatsappCloudService do
   describe '#validate_provider_config' do
     context 'when called' do
       it 'returns true if valid' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, message_templates_url)
+          .with(headers: service.api_headers)
         expect(subject.validate_provider_config?).to be(true)
         expect(whatsapp_channel.errors.present?).to be(false)
       end
 
       it 'returns false if invalid' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key').to_return(status: 401)
+        stub_request(:get, message_templates_url)
+          .with(headers: service.api_headers)
+          .to_return(status: 401)
         expect(subject.validate_provider_config?).to be(false)
       end
     end
@@ -688,6 +692,73 @@ describe Whatsapp::Providers::WhatsappCloudService do
         # Verify the service was only instantiated once
         expect(Whatsapp::CsatTemplateService).to have_received(:new).once
       end
+    end
+  end
+
+  describe '#create_template' do
+    let(:payload) do
+      {
+        name: 'test_template',
+        language: 'en',
+        category: 'UTILITY'
+      }
+    end
+
+    it 'creates a template and returns parsed response' do
+      stub_request(:post, message_templates_url)
+        .with(headers: service.api_headers, body: payload.to_json)
+        .to_return(status: 200, body: { id: '123', status: 'PENDING' }.to_json, headers: response_headers)
+
+      result = service.create_template(payload)
+
+      expect(result).to eq({ 'id' => '123', 'status' => 'PENDING' })
+    end
+
+    it 'raises error when creation fails' do
+      stub_request(:post, message_templates_url)
+        .with(headers: service.api_headers, body: payload.to_json)
+        .to_return(status: 400, body: { error: { message: 'Invalid parameter' } }.to_json, headers: response_headers)
+
+      expect { service.create_template(payload) }.to raise_error('Invalid parameter')
+    end
+  end
+
+  describe '#delete_template' do
+    it 'deletes a template and returns response' do
+      stub_request(:delete, "#{message_templates_url}?name=test_template")
+        .with(headers: service.api_headers)
+        .to_return(status: 200, body: '', headers: response_headers)
+
+      result = service.delete_template('test_template')
+
+      expect(result.success?).to be(true)
+    end
+
+    it 'raises error when deletion fails' do
+      stub_request(:delete, "#{message_templates_url}?name=test_template")
+        .with(headers: service.api_headers)
+        .to_return(status: 400, body: { error: { message: 'Template not found' } }.to_json, headers: response_headers)
+
+      expect { service.delete_template('test_template') }.to raise_error('Template not found')
+    end
+  end
+
+  describe '#send_reaction' do
+    it 'sends a reaction and returns message id' do
+      stub_request(:post, "#{service.send(:phone_id_path)}/messages")
+        .with(
+          headers: service.api_headers,
+          body: {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: '+123456789',
+            type: 'reaction',
+            reaction: { message_id: 'msg_123', emoji: '👍' }
+          }.to_json
+        )
+        .to_return(status: 200, body: { messages: [{ id: 'reaction_id' }] }.to_json, headers: response_headers)
+
+      expect(service.send_reaction('+123456789', 'msg_123', '👍')).to eq 'reaction_id'
     end
   end
 end

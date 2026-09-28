@@ -42,6 +42,23 @@ class WhatsappChannel extends ApiClient {
       `${this.baseUrl()}/whatsapp/manual/${inboxId}/setup_webhook`
     );
   }
+
+  getTemplates(inboxId) {
+    return axios.get(`${this.baseUrl()}/inboxes/${inboxId}/whatsapp_templates`);
+  }
+
+  createTemplate(inboxId, payload) {
+    return axios.post(
+      `${this.baseUrl()}/inboxes/${inboxId}/whatsapp_templates`,
+      payload
+    );
+  }
+
+  deleteTemplate(inboxId, name) {
+    return axios.delete(
+      `${this.baseUrl()}/inboxes/${inboxId}/whatsapp_templates/${encodeURIComponent(name)}`
+    );
+  }
 }
 
 export default new WhatsappChannel();

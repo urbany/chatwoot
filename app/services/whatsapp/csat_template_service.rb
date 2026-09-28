@@ -137,3 +137,5 @@ class Whatsapp::CsatTemplateService
     ENV.fetch('WHATSAPP_CLOUD_BASE_URL', 'https://graph.facebook.com')
   end
 end
+
+Whatsapp::CsatTemplateService.prepend_mod_with('Whatsapp::CsatTemplateService')

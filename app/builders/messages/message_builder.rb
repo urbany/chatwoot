@@ -23,6 +23,7 @@ class Messages::MessageBuilder
 
   def perform
     @message = @conversation.messages.build(message_params)
+    apply_external_created_at
     process_attachments
     process_emails
     # When the message has no quoted content, it will just be rendered as a regular message
@@ -33,6 +34,13 @@ class Messages::MessageBuilder
   end
 
   private
+
+  # Backdates the real created_at column (in addition to content_attributes) for imported messages.
+  def apply_external_created_at
+    return if @params[:external_created_at].blank?
+
+    @message.created_at = Time.zone.at(@params[:external_created_at].to_i)
+  end
 
   # Extracts content attributes from the given params.
   # - Converts ActionController::Parameters to a regular hash if needed.

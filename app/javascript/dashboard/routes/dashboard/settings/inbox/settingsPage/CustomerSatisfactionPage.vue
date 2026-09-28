@@ -48,9 +48,11 @@ const state = reactive({
   csatSurveyEnabled: false,
   displayType: 'emoji',
   message: '',
+  style: 'default',
   templateButtonText: 'Please rate us',
   surveyRuleOperator: 'contains',
   templateLanguage: 'en',
+  cooldown: 0,
 });
 
 const templateStatus = ref(null);
@@ -152,6 +154,7 @@ const initializeState = () => {
   const {
     display_type: displayType = CSAT_DISPLAY_TYPES.EMOJI,
     message = '',
+    style: surveyStyle = 'default',
     button_text: buttonText = 'Please rate us',
     language = 'en',
     survey_rules: surveyRules = {},
@@ -159,9 +162,11 @@ const initializeState = () => {
 
   state.displayType = displayType;
   state.message = message;
+  state.style = surveyStyle;
   state.templateButtonText = buttonText;
   state.templateLanguage = language;
   state.surveyRuleOperator = surveyRules.operator || 'contains';
+  state.cooldown = csat_config.cooldown || 0;
 
   selectedLabelValues.value = Array.isArray(surveyRules.values)
     ? [...surveyRules.values]
@@ -426,6 +431,8 @@ const performSave = async () => {
     const csatConfig = {
       display_type: state.displayType,
       message: state.message,
+      style: state.style,
+      cooldown: state.cooldown,
       button_text: state.templateButtonText,
       language: state.templateLanguage,
       survey_rules: {
@@ -518,6 +525,40 @@ const handleConfirmTemplateUpdate = async () => {
               @update="updateDisplayType"
             />
           </WithLabel>
+
+          <!-- Survey style selector -->
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-medium text-n-slate-12">
+              {{ $t('INBOX_MGMT.CSAT.STYLE.LABEL') }}
+            </label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  v-model="state.style"
+                  type="radio"
+                  value="default"
+                  class="text-n-brand-11"
+                />
+                <span class="text-sm text-n-slate-12">
+                  {{ $t('INBOX_MGMT.CSAT.STYLE.DEFAULT') }}
+                </span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  v-model="state.style"
+                  type="radio"
+                  value="inline"
+                  class="text-n-brand-11"
+                />
+                <span class="text-sm text-n-slate-12">
+                  {{ $t('INBOX_MGMT.CSAT.STYLE.INLINE') }}
+                </span>
+              </label>
+            </div>
+            <p class="text-xs text-n-slate-11">
+              {{ $t('INBOX_MGMT.CSAT.STYLE.HELP') }}
+            </p>
+          </div>
 
           <template v-if="isAnyWhatsAppChannel">
             <div
@@ -674,6 +715,23 @@ const handleConfirmTemplateUpdate = async () => {
               />
             </WithLabel>
           </template>
+
+          <!-- Cooldown period -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-n-slate-12">
+              {{ $t('INBOX_MGMT.CSAT.COOLDOWN.LABEL') }}
+            </label>
+            <Input
+              v-model.number="state.cooldown"
+              type="number"
+              min="0"
+              :placeholder="$t('INBOX_MGMT.CSAT.COOLDOWN.PLACEHOLDER')"
+              class="w-full"
+            />
+            <p class="text-xs text-n-slate-11">
+              {{ $t('INBOX_MGMT.CSAT.COOLDOWN.HELP') }}
+            </p>
+          </div>
 
           <WithLabel
             :label="$t('INBOX_MGMT.CSAT.SURVEY_RULE.LABEL')"

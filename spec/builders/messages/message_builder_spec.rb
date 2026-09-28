@@ -20,6 +20,23 @@ describe Messages::MessageBuilder do
       message = message_builder
       expect(message.content).to eq params[:content]
     end
+
+    context 'when external_created_at is provided' do
+      let(:external_time) { 1.week.ago.to_i }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           external_created_at: external_time
+                                         })
+      end
+
+      it 'backdates the message created_at while keeping it in content_attributes' do
+        message = message_builder
+
+        expect(message.created_at.to_i).to eq external_time
+        expect(message.content_attributes[:external_created_at].to_i).to eq external_time
+      end
+    end
   end
 
   describe '#content_attributes' do
@@ -87,6 +104,97 @@ describe Messages::MessageBuilder do
       it 'defaults to an empty hash' do
         message = message_builder
         expect(message.content_attributes).to eq({})
+      end
+    end
+
+    context 'when the message is an outgoing dashboard send on a WhatsApp inbox' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false, account: account)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           echo_id: 'temp-message-id-1',
+                                           content_attributes: { whatsapp_agent_header_enabled: true }
+                                         })
+      end
+
+      it 'persists the WhatsApp agent header flag from the dashboard send path' do
+        message = described_class.new(user, conversation, params).perform
+
+        expect(message.content_attributes).to include(whatsapp_agent_header_enabled: true)
+        expect(message.content).to eq("**#{user.available_name}:**\ntest")
+      end
+    end
+
+    context 'when the message sender has no public name' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false, account: account)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           echo_id: 'temp-message-id-1',
+                                           content_attributes: { whatsapp_agent_header_enabled: true }
+                                         })
+      end
+
+      before do
+        user.update!(display_name: '')
+      end
+
+      it 'falls back to the user name in the stored content' do
+        message = described_class.new(user, conversation, params).perform
+
+        expect(message.content).to eq("**#{user.name}:**\ntest")
+      end
+    end
+
+    context 'when the message is a WhatsApp template send' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false, account: account)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test',
+                                           echo_id: 'temp-message-id-1',
+                                           content_attributes: { whatsapp_agent_header_enabled: true },
+                                           template_params: {
+                                             name: 'sample_template',
+                                             category: 'utility',
+                                             language: 'en_US',
+                                             namespace: 'sample-namespace',
+                                             processed_params: {}
+                                           }
+                                         })
+      end
+
+      it 'does not persist the WhatsApp agent header for template sends' do
+        message = described_class.new(user, conversation, params).perform
+
+        expect(message.content).to eq('test')
+        expect(message.content_attributes).not_to include(whatsapp_agent_header_enabled: true)
+      end
+    end
+
+    context 'when the message is not sent from the dashboard UI' do
+      let(:whatsapp_channel) do
+        create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false, account: account)
+      end
+      let(:conversation) { create(:conversation, inbox: whatsapp_channel.inbox, account: account) }
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'test'
+                                         })
+      end
+
+      it 'does not persist the WhatsApp agent header flag' do
+        message = described_class.new(user, conversation, params).perform
+
+        expect(message.content_attributes).not_to include(whatsapp_agent_header_enabled: true)
       end
     end
   end
