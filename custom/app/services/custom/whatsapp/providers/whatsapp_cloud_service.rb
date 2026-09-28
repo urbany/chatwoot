@@ -82,7 +82,7 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
   end
 
   def fetch_whatsapp_templates(url, after: nil, page: 1)
-    options = { headers: api_headers }
+    options = { headers: { 'Authorization' => "Bearer #{whatsapp_channel.template_access_token}" } }
     options[:query] = { after: after } if after.present?
     response = HTTParty.get(url, options)
     return handle_template_fetch_failure(response, url, page) unless response.success?
@@ -185,7 +185,7 @@ module Custom::Whatsapp::Providers::WhatsappCloudService
   end
 
   def build_attachment_content(type, attachment, outgoing_content)
-    type_content = { 'link' => attachment.download_url }
+    type_content = Whatsapp::MediaUploadService.new(whatsapp_channel, attachment).perform || { 'link' => attachment.download_url }
     type_content['caption'] = outgoing_content unless %w[audio sticker].include?(type)
     type_content['filename'] = attachment.file.filename if type == 'document'
     type_content['voice'] = true if voice_message?(type, attachment)
